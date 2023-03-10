@@ -47,9 +47,7 @@ sql_conn.commit()
 
 import my_utils as mu
 import imp
-
-imp.reload(my_utils)
-
+imp.reload(mu)
 mu.oracle_open()
 
 oracle_query = 'select * from test3'
@@ -70,4 +68,4 @@ sql_conn.commit()
 sql_conn.close()
 
 url = 'http://openapi.seoul.go.kr:8088/(인증키)/xml/tbLnOpendataRentV/1/5/'
-mu.df_creater(url)
+df = mu.df_creater(url)
