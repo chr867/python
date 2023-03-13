@@ -1,0 +1,44 @@
+From 87f6de650b32ef2382eeeba9e04cf98472074e80 Mon Sep 17 00:00:00 2001
+From: home <chr867423@gmail.com>
+Date: Mon, 13 Mar 2023 20:27:27 +0900
+Subject: [PATCH] ?
+
+---
+ .gitignore     | 10 ++++++++++
+ .gitignore.rej |  6 ++++++
+ 2 files changed, 16 insertions(+)
+ create mode 100644 .gitignore.rej
+
+diff --git a/.gitignore b/.gitignore
+index aaa0e96..82270b4 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,3 +1,13 @@
++<<<<<<< HEAD
+ *.xml
+ *.iml
+ *.pyc
++=======
++.idea/misc.xml
++.idea/modules.xml
++.idea/python.iml
++.idea/vcs.xml
++.idea/workspace.xml
++.idea/inspectionProfiles/profiles_settings.xml
++__pycache__/my_utils.cpython-39.pyc
++>>>>>>> parent of c8760f2 (Revert "230313_test")
+diff --git a/.gitignore.rej b/.gitignore.rej
+new file mode 100644
+index 0000000..6c4002f
+--- /dev/null
++++ b/.gitignore.rej
+@@ -0,0 +1,6 @@
++diff a/.gitignore b/.gitignore	(rejected hunks)
++@@ -2,3 +3,4 @@
++++<<<<<<< HEAD
++ +*.xml
++ +*.iml
++ +*.pyc
+-- 
+2.36.0.windows.1
+
