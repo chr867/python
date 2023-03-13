@@ -1,3 +1,5 @@
+import time
+
 import pandas as pd
 import pymysql
 import cx_Oracle
@@ -75,50 +77,58 @@ def df_creater(url):
 
 
 def match_timeline(summoner_name, num):
+    result = []
 
     def get_puuid(summoner_name_p):
+        print(summoner_name_p)
         summoner_get_url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name_p}?api_key={riot_api_key}'
         summoner_get_res = requests.get(summoner_get_url).json()
-        summoner_puuid = summoner_get_res['puuid']
-        result_p = get_matches_id(summoner_puuid)
-        return result_p
+        return get_matches_id(summoner_get_res['puuid'])
 
     def get_matches_id(puuid):
         get_matches_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type=ranked&start=0&count={num}&api_key={riot_api_key}'
         get_matches_res = requests.get(get_matches_url).json()
-        result_p = get_match_info(get_matches_res)
+        return get_match_info(get_matches_res)
+
+    def get_match_info(match_ids):
+        result_p = []
+        for match_id in match_ids:
+            get_match_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={riot_api_key}'
+            get_match_res = requests.get(get_match_url).json()
+            get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={riot_api_key}'
+            get_timeline_res = requests.get(get_timeline_url).json()
+            result_p.append({'match_id': match_id, 'match': get_match_res, 'timeline': get_timeline_res})
+            time.sleep(1)
         return result_p
 
-    def get_match_info(match_id):
-        get_match_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={riot_api_key}'
-        get_match_res = requests.get(get_match_url).json()
-        get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={riot_api_key}'
-        get_timeline_res = requests.get(get_timeline_url).json()
-        result_p = {'match': get_match_res, 'timeline': get_timeline_res}
-        return result_p
+    for n in summoner_name:
+        result.append(get_puuid(n))
 
-    result = get_puuid(summoner_name)
-    return result
+    res_list = []
+    for i in result:
+        for j in i:
+            res_list.append([j['match_id'], j['match'], j['timeline']])
+    return res_list
 
 
-def get_puuid(user):
-    url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{user}?api_key={riot_api_key}'
-    res = requests.get(url).json()
-    puuid = res['puuid']
-    return puuid
-
-
-def get_match_id(puuid, num):
-    url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type=ranked&start=0&count={num}&api_key={riot_api_key}'
-    res = requests.get(url).json()
-    return res
-
-
-def get_matches_timelines(match_id):
-    url1 = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={riot_api_key}'
-    res1 = requests.get(url1).json()
-    url2 = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={riot_api_key}'
-    res2 = requests.get(url2).json()
-    return res1, res2
+# def get_puuid(user):
+#     url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{user}?api_key={riot_api_key}'
+#     res = requests.get(url).json()
+#     puuid = res['puuid']
+#     return puuid
+#
+#
+# def get_match_id(puuid, num):
+#     url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type=ranked&start=0&count={num}&api_key={riot_api_key}'
+#     res = requests.get(url).json()
+#     return res
+#
+#
+# def get_matches_timelines(match_id):
+#     url1 = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={riot_api_key}'
+#     res1 = requests.get(url1).json()
+#     url2 = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={riot_api_key}'
+#     res2 = requests.get(url2).json()
+#     return res1, res2
 
 
