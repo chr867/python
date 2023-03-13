@@ -210,27 +210,15 @@ test_mu['timeline']
 m_url = f'https://kr.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?api_key={riot_api_key}'
 m_res = requests.get(m_url).json()
 
+import imp
+imp.reload(mu)
+
 m_name_list = []
 for i in m_res['entries'][:50]:
     m_name_list.append(i['summonerName'])
 
-m_puuid_list = []
-for i in m_name_list:
-    try:
-        m_puuid_list.append(mu.get_puuid(i))
-    except:
-        continue
+test_res = mu.match_timeline(m_name_list, 2)
 
-m_matchid_list = []
-for i in m_puuid_list:
-    m_matchid_list.append(mu.get_match_id(i, 2))
-
-m_matchid_list
-
-m_list = []
-for idx, i in tqdm(enumerate(m_matchid_list)):
-    for j in i:
-        matches, timelines = mu.get_matches_timelines(j)
-        time.sleep(1)
-        m_list.append([j, matches, timelines])
+m_df = pd.DataFrame(test_res, columns=['match_id', 'match', 'timeline'])
+m_df
 
