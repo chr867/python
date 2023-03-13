@@ -1,0 +1,6 @@
+diff a/.gitignore b/.gitignore	(rejected hunks)
+@@ -2,3 +3,4 @@
+++<<<<<<< HEAD
+ +*.xml
+ +*.iml
+ +*.pyc
