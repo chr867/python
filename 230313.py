@@ -219,6 +219,6 @@ for i in m_res['entries'][:50]:
 
 test_res = mu.match_timeline(m_name_list, 2)
 
-m_df = pd.DataFrame(test_res, columns=['match_id', 'match', 'timeline'])
+m_df = pd.DataFrame(test_res, columns=['match_id', 'matches', 'timeline'])
 m_df
 

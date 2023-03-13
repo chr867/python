@@ -98,12 +98,14 @@ def match_timeline(summoner_name, num):
             get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={riot_api_key}'
             get_timeline_res = requests.get(get_timeline_url).json()
             result_p.append({'match_id': match_id, 'match': get_match_res, 'timeline': get_timeline_res})
-            time.sleep(1)
         return result_p
 
     for n in summoner_name:
-        result.append(get_puuid(n))
-
+        try:
+            result.append(get_puuid(n))
+            time.sleep(1)
+        except:
+            continue
     res_list = []
     for i in result:
         for j in i:

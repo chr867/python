@@ -5,3 +5,5 @@
 .idea/workspace.xml
 .idea/inspectionProfiles/profiles_settings.xml
 __pycache__/my_utils.cpython-39.pyc
+
+.idea/.name
