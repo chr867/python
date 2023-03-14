@@ -286,7 +286,7 @@ def m_insert(d, conn):
         f'totalDamageDealtToChampions, totalDamageTaken)'
         f'values ({d.gameId}, {d.gameDuration}, {repr(d.gameVersion)}, {repr(d.summonerName)}, {d.summonerLevel},'
         f'{d.participantId}, {repr(d.championName)}, {d.champExperience}, {repr(d.teamPosition)}, {d.teamId},'
-        f'{repr(d.win)}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
+        f'{repr(str(d.win))}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
     )
     mu.mysql_execute(query, conn)
     mu.oracle_execute(query)
@@ -296,7 +296,6 @@ tqdm.pandas()
 sql_conn = mu.connect_mysql('lol_icia')
 m_match_df.progress_apply(lambda x: m_insert(x, sql_conn), axis=1)
 mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES', sql_conn)
-sql_conn.rollback()
 sql_conn.commit()
 sql_conn.close()
 
@@ -316,3 +315,20 @@ mu.oracle_open()
 m_match_df.progress_apply(lambda x: m_insert(x, sql_conn), axis=1)
 test222 = mu.oracle_execute('select * FROM LOL_MATCHES')
 mu.oracle_close()
+
+m_df.iloc[0].timeline['info']['participants'][3].keys()
+m_df.iloc[0].timeline['info']['frames'][10].keys()
+
+t_list = []
+for i in range(10):
+    tmp = []
+    tmp.append(matches_df.iloc[0].match_id)
+    tmp.append(matches_df.iloc[0].timeline['info']['participants'][i]['participantId'])
+    for j in range(5, 16):
+        tmp.append(matches_df.iloc[0].timeline['info']['frames'][j]['participantFrames'][str(i+1)]['totalGold'])
+    t_list.append(tmp)
+
+columns = ['match_id', 'participantsId', 'g5', 'g6', 'g7', 'g8', 'g9', 'g10', 'g11', 'g12', 'g13', 'g14', 'g15']
+t_df = pd.DataFrame(t_list, columns=columns)
+
+t_df
