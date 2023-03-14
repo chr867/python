@@ -224,7 +224,8 @@ m_df
 
 m_list = m_df[m_df['match_id'] != 'status']
 
-m_list.iloc[0]['matches']['info']['participants']['kills']
+m_list.iloc[0]['matches']['info']['gameId']
+m_list.iloc[0]['matches']['info']['participants'][0]['summonerName']
 
 m_match_list = []
 for idx, i in enumerate(m_list['matches']):
@@ -250,6 +251,7 @@ for idx, i in enumerate(m_list['matches']):
 
 m_list['matches'][0]['info'].keys()
 m_list.iloc[0]['matches']['info']['participants'][0].keys()
+
 m_match_list
 
 m_match_df = pd.DataFrame(m_match_list, columns=['gameId', 'gameDuration', 'gameVersion', 'summonerName',
