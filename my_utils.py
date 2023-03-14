@@ -7,7 +7,7 @@ import requests
 
 dsn = cx_Oracle.makedsn('localhost', 1521, 'xe')
 seoul_api_key = '77676c6c566368723431555642674c'
-riot_api_key = 'RGAPI-f44ca538-b547-401d-a6bc-5ee964133c0f'
+riot_api_key = 'RGAPI-44e02686-2046-4847-81a7-bfcfc2f1dda0'
 
 # Oracle
 
@@ -83,6 +83,7 @@ def match_timeline(summoner_name, num):
         print(summoner_name_p)
         summoner_get_url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name_p}?api_key={riot_api_key}'
         summoner_get_res = requests.get(summoner_get_url).json()
+        time.sleep(0.2)
         return get_matches_id(summoner_get_res['puuid'])
 
     def get_matches_id(puuid):
@@ -103,7 +104,6 @@ def match_timeline(summoner_name, num):
     for n in summoner_name:
         try:
             result.append(get_puuid(n))
-            time.sleep(1)
         except:
             continue
     res_list = []

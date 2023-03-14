@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-riot_api_key = 'RGAPI-f44ca538-b547-401d-a6bc-5ee964133c0f'
+riot_api_key = 'RGAPI-44e02686-2046-4847-81a7-bfcfc2f1dda0'
 url = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={riot_api_key}'
 res = requests.get(url).json()
 res.keys()
@@ -214,7 +214,7 @@ import imp
 imp.reload(mu)
 
 m_name_list = []
-for i in m_res['entries'][:50]:
+for i in m_res['entries'][:100]:
     m_name_list.append(i['summonerName'])
 
 test_res = mu.match_timeline(m_name_list, 2)
@@ -222,3 +222,73 @@ test_res = mu.match_timeline(m_name_list, 2)
 m_df = pd.DataFrame(test_res, columns=['match_id', 'matches', 'timeline'])
 m_df
 
+m_list = m_df[m_df['match_id'] != 'status']
+
+m_list.iloc[0]['matches']['info']['participants']['kills']
+
+m_match_list = []
+for idx, i in enumerate(m_list['matches']):
+    for j in m_list.iloc[idx]['matches']['info']['participants']:
+        m_match_list.append([
+            i['info']['gameId'],
+            i['info']['gameDuration'],
+            i['info']['gameVersion'],
+            j['summonerName'],
+            j['summonerLevel'],
+            j['participantId'],
+            j['championName'],
+            j['champExperience'],
+            j['teamPosition'],
+            j['teamId'],
+            j['win'],
+            j['kills'],
+            j['deaths'],
+            j['assists'],
+            j['totalDamageDealtToChampions'],
+            j['totalDamageTaken']
+        ])
+
+m_list['matches'][0]['info'].keys()
+m_list.iloc[0]['matches']['info']['participants'][0].keys()
+m_match_list
+
+m_match_df = pd.DataFrame(m_match_list, columns=['gameId', 'gameDuration', 'gameVersion', 'summonerName',
+                                                 'summonerLevel', 'participantId', 'championName', 'champExperience',
+                                                 'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists',
+                                                 'totalDamageDealtToChampions', 'totalDamageTaken'])
+sql_conn = mu.connect_mysql('lol_icia')
+m_query = """
+CREATE TABLE LOL_MATCHES (gameId bigint(20), gameDuration int(10), gameVersion varchar(20), summonerName varchar(30), 
+summonerLevel int(10), participantId int(3), championName varchar(20), champExperience int(10), teamPosition varchar(20),
+teamId int(10), win varchar(10), kills int(5), deaths int(5), assists int(5), totalDamageDealtToChampions int(10),
+totalDamageTaken int(10))
+"""
+mu.mysql_execute(m_query, sql_conn)
+sql_conn.commit()
+sql_conn.close()
+
+
+def m_insert(d, conn):
+    query = (
+        f'insert into lol_matches (gameId, gameDuration, gameVersion, summonerName, summonerLevel, participantId,'
+        f'championName, champExperience, teamPosition, teamId, win, kills, deaths, assists,'
+        f'totalDamageDealtToChampions, totalDamageTaken)'
+        f'values ({d.gameId}, {d.gameDuration}, {repr(d.gameVersion)}, {repr(d.summonerName)}, {d.summonerLevel},'
+        f'{d.participantId}, {repr(d.championName)}, {d.champExperience}, {repr(d.teamPosition)}, {d.teamId},'
+        f'{repr(d.win)}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
+    )
+    mu.mysql_execute(query, conn)
+    return
+
+tqdm.pandas()
+sql_conn = mu.connect_mysql('lol_icia')
+m_match_df.progress_apply(lambda x: m_insert(x, sql_conn), axis=1)
+mu.mysql_execute('SELECT * FROM LOL_MATCHES', sql_conn)
+sql_conn.rollback()
+sql_conn.commit()
+sql_conn.close()
+
+# riot api master 구간 데이터를 가져오기
+# 첫번째 df는 match id, matches, timeline
+# matches 컬럼을 이용해서 match_df를 만들기
+# totalDamageDealtToChampions, totalDamageTaken
