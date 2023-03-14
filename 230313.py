@@ -222,14 +222,14 @@ test_res = mu.match_timeline(m_name_list, 2)
 m_df = pd.DataFrame(test_res, columns=['match_id', 'matches', 'timeline'])
 m_df
 
-m_list = m_df[m_df['match_id'] != 'status']
+m_df = m_df[m_df['match_id'] != 'status']
 
-m_list.iloc[0]['matches']['info']['gameId']
-m_list.iloc[0]['matches']['info']['participants'][0]['summonerName']
+m_df.iloc[0]['matches']['info']['gameId']
+m_df.iloc[0]['matches']['info']['participants'][0]['summonerName']
 
 m_match_list = []
-for idx, i in enumerate(m_list['matches']):
-    for j in m_list.iloc[idx]['matches']['info']['participants']:
+for idx, i in enumerate(m_df['matches']):
+    for j in m_df.iloc[idx]['matches']['info']['participants']:
         m_match_list.append([
             i['info']['gameId'],
             i['info']['gameDuration'],
@@ -249,15 +249,17 @@ for idx, i in enumerate(m_list['matches']):
             j['totalDamageTaken']
         ])
 
-m_list['matches'][0]['info'].keys()
-m_list.iloc[0]['matches']['info']['participants'][0].keys()
-
+m_df['matches'][0]['info'].keys()
+m_df.iloc[0]['matches']['info']['participants'][0].keys()
 m_match_list
 
 m_match_df = pd.DataFrame(m_match_list, columns=['gameId', 'gameDuration', 'gameVersion', 'summonerName',
                                                  'summonerLevel', 'participantId', 'championName', 'champExperience',
                                                  'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists',
                                                  'totalDamageDealtToChampions', 'totalDamageTaken'])
+
+# MYSQL
+
 sql_conn = mu.connect_mysql('lol_icia')
 m_query = """
 CREATE TABLE LOL_MATCHES (gameId bigint(20), gameDuration int(10), gameVersion varchar(20), summonerName varchar(30), 
@@ -277,20 +279,33 @@ def m_insert(d, conn):
         f'totalDamageDealtToChampions, totalDamageTaken)'
         f'values ({d.gameId}, {d.gameDuration}, {repr(d.gameVersion)}, {repr(d.summonerName)}, {d.summonerLevel},'
         f'{d.participantId}, {repr(d.championName)}, {d.champExperience}, {repr(d.teamPosition)}, {d.teamId},'
-        f'{repr(d.win)}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
+        f'{repr(str(d.win))}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
     )
     mu.mysql_execute(query, conn)
+    mu.oracle_execute(query)
     return
 
 tqdm.pandas()
 sql_conn = mu.connect_mysql('lol_icia')
 m_match_df.progress_apply(lambda x: m_insert(x, sql_conn), axis=1)
-mu.mysql_execute('SELECT * FROM LOL_MATCHES', sql_conn)
+mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES', sql_conn)
 sql_conn.rollback()
 sql_conn.commit()
 sql_conn.close()
 
-# riot api master 구간 데이터를 가져오기
-# 첫번째 df는 match id, matches, timeline
-# matches 컬럼을 이용해서 match_df를 만들기
-# totalDamageDealtToChampions, totalDamageTaken
+# ORACLE
+
+mu.oracle_open()
+o_query = """
+CREATE TABLE LOL_MATCHES (gameId number(20), gameDuration number(10), gameVersion varchar(20), summonerName varchar(30), 
+summonerLevel number(10), participantId number(3), championName varchar(20), champExperience number(10), teamPosition varchar(20),
+teamId number(10), win varchar(10), kills number(5), deaths number(5), assists number(5), totalDamageDealtToChampions number(10),
+totalDamageTaken number(10))
+"""
+mu.oracle_execute(o_query)
+mu.oracle_close()
+
+mu.oracle_open()
+m_match_df.progress_apply(lambda x: m_insert(x, sql_conn), axis=1)
+test222 = mu.oracle_execute('select * FROM LOL_MATCHES')
+mu.oracle_close()

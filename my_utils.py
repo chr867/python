@@ -89,6 +89,7 @@ def match_timeline(summoner_name, num):
     def get_matches_id(puuid):
         get_matches_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?type=ranked&start=0&count={num}&api_key={riot_api_key}'
         get_matches_res = requests.get(get_matches_url).json()
+        time.sleep(0.2)
         get_match_info(get_matches_res)
 
     def get_match_info(match_ids):
@@ -97,6 +98,7 @@ def match_timeline(summoner_name, num):
             get_match_res = requests.get(get_match_url).json()
             get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={riot_api_key}'
             get_timeline_res = requests.get(get_timeline_url).json()
+            time.sleep(0.2)
             result.append([match_id, get_match_res, get_timeline_res])
 
     for n in summoner_name:
