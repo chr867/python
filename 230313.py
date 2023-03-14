@@ -222,14 +222,15 @@ test_res = mu.match_timeline(m_name_list, 2)
 m_df = pd.DataFrame(test_res, columns=['match_id', 'matches', 'timeline'])
 m_df
 
-m_df = m_df[m_df['match_id'] != 'status']
+matches_df = m_df[m_df['match_id'] != 'status']
+matches_df.reset_index(drop=True, inplace=True)
 
-m_df.iloc[0]['matches']['info']['gameId']
-m_df.iloc[0]['matches']['info']['participants'][0]['summonerName']
+matches_df.iloc[0]['matches']['info']['gameId']
+matches_df.iloc[0]['matches']['info']['participants'][0]['summonerName']
 
 m_match_list = []
-for idx, i in enumerate(m_df['matches']):
-    for j in m_df.iloc[idx]['matches']['info']['participants']:
+for idx, i in enumerate(matches_df['matches']):
+    for j in matches_df.iloc[idx]['matches']['info']['participants']:
         m_match_list.append([
             i['info']['gameId'],
             i['info']['gameDuration'],
@@ -249,14 +250,20 @@ for idx, i in enumerate(m_df['matches']):
             j['totalDamageTaken']
         ])
 
-m_df['matches'][0]['info'].keys()
-m_df.iloc[0]['matches']['info']['participants'][0].keys()
+matches_df['matches'][0]['info'].keys()
+matches_df.iloc[0]['matches']['info']['participants'][0].keys()
 m_match_list
+
 
 m_match_df = pd.DataFrame(m_match_list, columns=['gameId', 'gameDuration', 'gameVersion', 'summonerName',
                                                  'summonerLevel', 'participantId', 'championName', 'champExperience',
                                                  'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists',
                                                  'totalDamageDealtToChampions', 'totalDamageTaken'])
+
+m_match_df['win'] = m_match_df['win'].astype(object)
+
+m_match_df.dtypes
+
 
 # MYSQL
 
@@ -279,7 +286,7 @@ def m_insert(d, conn):
         f'totalDamageDealtToChampions, totalDamageTaken)'
         f'values ({d.gameId}, {d.gameDuration}, {repr(d.gameVersion)}, {repr(d.summonerName)}, {d.summonerLevel},'
         f'{d.participantId}, {repr(d.championName)}, {d.champExperience}, {repr(d.teamPosition)}, {d.teamId},'
-        f'{repr(str(d.win))}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
+        f'{repr(d.win)}, {d.kills}, {d.deaths}, {d.assists}, {d.totalDamageDealtToChampions}, {d.totalDamageTaken})'
     )
     mu.mysql_execute(query, conn)
     mu.oracle_execute(query)
