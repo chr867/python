@@ -40,6 +40,7 @@ lst[0]['summonerName']
 for idx, i in lst:
     print(idx, i['summonerName'])
 
+
 # get_rawdata(tier) 함수를 완성하기
 # division 리스트와 page를 랜덤으로 뽑아올 함수를 사용하기 lst 리스트도 만들어두기
 # riot api를 통해서 summonerName을 가져오기
@@ -65,10 +66,13 @@ def get_rawdata(tier_p):
     print('get_rawdata complete')
     return result_df
 
+
 import imp
+
 imp.reload(mu)
 
 rawdata_df = get_rawdata('SILVER')
+
 
 # 원시데이터인 df를 넣어서 ouput match,timeline 데이터가 있는 df를 만들기
 # return -> df
@@ -85,10 +89,11 @@ def get_match_timeline_df(df_p):
                'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25']
     print('소환사 스텟 생성중')
     for i in tqdm(range(len(df))):
-        # matches 관련된 데이터
+    # matches 관련된 데이터
 
-        # timeline 관련 데이터
+    # timeline 관련 데이터
     return df
+
 
 df_creater = []
 rawdata_df['matches'][0]['metadata']['matchId']
@@ -104,7 +109,8 @@ columns = ['gameId', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLev
            'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25']
 
 df_creater = []
-for idx,i in tqdm(enumerate(rawdata_df['matches'])):
+df_creater_gold = []
+for idx, i in tqdm(enumerate(rawdata_df['matches'])):
     for idx_p, j in enumerate(i['info']['participants']):
         df_creater.append([
             i['info']['gameId'], i['info']['gameDuration'], i['info']['gameVersion'],
@@ -112,15 +118,12 @@ for idx,i in tqdm(enumerate(rawdata_df['matches'])):
             j['champExperience'], j['teamPosition'], j['teamId'], j['win'], j['kills'],
             j['deaths'], j['assists'], j['totalDamageDealtToChampions'], j['totalDamageTaken'],
         ])
-len(df_creater)
-for x in range(len(df_creater)):
-    print(df_creater[x][0])
-    for k in range(5,26):
-        try:
-            df_creater[x].append(rawdata_df.iloc[x]['timeline']['info']['frames'][k]['participantFrames'][str(j['participantId'])]['totalGold'])
-        except:
-            df_creater[x].append(0)
-test_df = pd.DataFrame(df_creater, columns=columns)
+        for t in range(5, 26):
+            try:
+                df_creater[-1].append(rawdata_df.iloc[idx]['timeline']['info']['frames'][t]['participantFrames'][str(j['participantId'])]['totalGold'])  # 시간당 골드획득
+            except:
+                df_creater[-1].append(0)
+test_df = pd.DataFrame(df_creater)
 
-time_gold = rawdata_df.iloc[0]['timeline']['info']['frames'][5]['participantFrames']['1']['totalGold']  #시간당 골드획득
+time_gold = rawdata_df.iloc[0]['timeline']['info']['frames'][0]['participantFrames']['1']['totalGold']  # 시간당 골드획득
 sum_df = pd.DataFrame(df_creater, columns=columns)
