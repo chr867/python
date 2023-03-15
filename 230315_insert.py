@@ -59,6 +59,7 @@ def get_rawdata(tier_p):
         lst_p += random.sample(res_p, 5)
 
     name_lst = [i['summonerName'] for i in lst_p]
+    # name_lst = list(map(lambda x: x['summonerName'], lst_p))
     result_res = mu.match_timeline(name_lst, 3)
     result_df = pd.DataFrame(result_res, columns=['match_id', 'matches', 'timeline'])
     return result_df
@@ -67,8 +68,3 @@ import imp
 imp.reload(mu)
 
 rawdata_df = get_rawdata('SILVER')
-rawdata_df2 = get_rawdata('SILVER')
-
-
-
-
