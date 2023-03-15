@@ -36,6 +36,10 @@ for division in division_list:
 
 lst
 lst[0]['summonerName']
+
+for idx, i in lst:
+    print(idx, i['summonerName'])
+
 # get_rawdata(tier) 함수를 완성하기
 # division 리스트와 page를 랜덤으로 뽑아올 함수를 사용하기 lst 리스트도 만들어두기
 # riot api를 통해서 summonerName을 가져오기
@@ -63,5 +67,8 @@ import imp
 imp.reload(mu)
 
 rawdata_df = get_rawdata('SILVER')
-result_df = get_rawdata('SILVER')
+rawdata_df2 = get_rawdata('SILVER')
+
+
+
 
