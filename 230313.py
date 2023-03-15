@@ -1,7 +1,7 @@
 import requests
 import pandas as pd
 
-riot_api_key = 'RGAPI-44e02686-2046-4847-81a7-bfcfc2f1dda0'
+riot_api_key = 'RGAPI-c521319d-2c76-452d-8541-530c2020422e'
 url = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={riot_api_key}'
 res = requests.get(url).json()
 res.keys()
