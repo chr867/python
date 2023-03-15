@@ -111,4 +111,5 @@ def match_timeline(summoner_name, num):
         except:
             print(n, '예외 발생')
             continue
+    print('match_timeline complete')
     return result

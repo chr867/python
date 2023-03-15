@@ -62,9 +62,65 @@ def get_rawdata(tier_p):
     # name_lst = list(map(lambda x: x['summonerName'], lst_p))
     result_res = mu.match_timeline(name_lst, 3)
     result_df = pd.DataFrame(result_res, columns=['match_id', 'matches', 'timeline'])
+    print('get_rawdata complete')
     return result_df
 
 import imp
 imp.reload(mu)
 
 rawdata_df = get_rawdata('SILVER')
+
+# 원시데이터인 df를 넣어서 ouput match,timeline 데이터가 있는 df를 만들기
+# return -> df
+# 함수 결과값(df)를 넣을 수 있는 테이블 생성, insert문까지
+# pk - (match_id, participantId)
+def get_match_timeline_df(df_p):
+    # df를 한개로 만들기
+    df_creater = []
+    columns = ['gameId', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId',
+               'championName', 'champExperience',
+               'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists', 'totalDamageDealtToChampions',
+               'totalDamageTaken', 'g_5', 'g_6', 'g_7', 'g_8', 'g_9', 'g_10', 'g_11', 'g_12', 'g_13', 'g_14', 'g_15',
+               'g_16', 'g_17',
+               'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25']
+    print('소환사 스텟 생성중')
+    for i in tqdm(range(len(df))):
+        # matches 관련된 데이터
+
+        # timeline 관련 데이터
+    return df
+
+df_creater = []
+rawdata_df['matches'][0]['metadata']['matchId']
+# match - ['match_id' 인포,'gameDuration' 인포,'gameVersion' 인포,'summonerName' 인포>파티,'summonerLevel'인포->파티,'participantId'인포->파티
+# , 'championName' 인포->파티, 'champExperience' 인포->파티,'teamPosition' 인포->파티, 'teamId' 인포->파티, 'win' 인포->파티,
+# 'kills' 인포->파티, 'deaths' 인포->파티 ,'assists' 인포->파티, 'totalDamageDealtToChampions' 인포->파티, 'totalDamageTaken 인포->파티']
+# timeline - ['participantId','g5','g6' ~ 'g25'] -> 25분까지 안가는 게임 try except: 0 insert
+columns = ['gameId', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId',
+           'championName', 'champExperience',
+           'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists', 'totalDamageDealtToChampions',
+           'totalDamageTaken', 'g_5', 'g_6', 'g_7', 'g_8', 'g_9', 'g_10', 'g_11', 'g_12', 'g_13', 'g_14', 'g_15',
+           'g_16', 'g_17',
+           'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25']
+
+df_creater = []
+for idx,i in tqdm(enumerate(rawdata_df['matches'])):
+    for idx_p, j in enumerate(i['info']['participants']):
+        df_creater.append([
+            i['info']['gameId'], i['info']['gameDuration'], i['info']['gameVersion'],
+            j['summonerName'], j['summonerLevel'], j['participantId'], j['championName'],
+            j['champExperience'], j['teamPosition'], j['teamId'], j['win'], j['kills'],
+            j['deaths'], j['assists'], j['totalDamageDealtToChampions'], j['totalDamageTaken'],
+        ])
+len(df_creater)
+for x in range(len(df_creater)):
+    print(df_creater[x][0])
+    for k in range(5,26):
+        try:
+            df_creater[x].append(rawdata_df.iloc[x]['timeline']['info']['frames'][k]['participantFrames'][str(j['participantId'])]['totalGold'])
+        except:
+            df_creater[x].append(0)
+test_df = pd.DataFrame(df_creater, columns=columns)
+
+time_gold = rawdata_df.iloc[0]['timeline']['info']['frames'][5]['participantFrames']['1']['totalGold']  #시간당 골드획득
+sum_df = pd.DataFrame(df_creater, columns=columns)
