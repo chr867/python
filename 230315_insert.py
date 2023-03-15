@@ -84,10 +84,10 @@ rawdata_df = get_rawdata('SILVER')
 # 원시데이터인 df를 넣어서 ouput match,timeline 데이터가 있는 df를 만들기
 # return -> df
 # 함수 결과값(df)를 넣을 수 있는 테이블 생성, insert문까지
-# pk - (match_id, participantId)
+# pk - (game_id, participantId)
 def get_match_timeline_df(df_p):
     df_creater = []
-    columns = ['gameId', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId',
+    columns = ['match_id', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId',
                'championName', 'champExperience',
                'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists', 'totalDamageDealtToChampions',
                'totalDamageTaken', 'g_5', 'g_6', 'g_7', 'g_8', 'g_9', 'g_10', 'g_11', 'g_12', 'g_13', 'g_14', 'g_15',
@@ -96,7 +96,7 @@ def get_match_timeline_df(df_p):
     for m_idx, m in tqdm(enumerate(df_p['matches'])):
         for p in m['info']['participants']:
             df_creater.append([
-                m['info']['gameId'], m['info']['gameDuration'], m['info']['gameVersion'],
+                m['metadata']['matchId'], m['info']['gameDuration'], m['info']['gameVersion'],
                 p['summonerName'], p['summonerLevel'], p['participantId'], p['championName'],
                 p['champExperience'], p['teamPosition'], p['teamId'], p['win'],
                 p['kills'], p['deaths'], p['assists'], p['totalDamageDealtToChampions'],
@@ -104,7 +104,8 @@ def get_match_timeline_df(df_p):
             ])
             for t in range(5, 26):
                 try:
-                    g_each = rawdata_df.iloc[m_idx]['timeline']['info']['frames'][t]['participantFrames'][str(p['participantId'])]['totalGold']
+                    p_id = str(p['participantId'])
+                    g_each = rawdata_df.iloc[m_idx]['timeline']['info']['frames'][t]['participantFrames'][p_id]['totalGold']
                     df_creater[-1].append(g_each)
                 except:
                     df_creater[-1].append(0)
