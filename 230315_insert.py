@@ -51,18 +51,47 @@ for idx, i in lst:
 import imp
 imp.reload(mu)
 
+url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
+res_p = requests.get(url_p).json()
+t_lst = random.sample(res_p['entries'], 5)
+len(res_p['entries'])
+t_lst[0]['summonerName']
+
+
 def get_rawdata(tier_p):
-
-    division_list_p = ['I', 'II', 'III', 'IV']
-    lst_p = []
-    for division_p in division_list_p:
-        page_p = random.randrange(1, 10)
-        url_p = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_p}/{division_p}?page={page_p}&api_key={mu.riot_api_key}'
+    if tier_p == 'C':
+        print(tier_p)
+        url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
         res_p = requests.get(url_p).json()
-        lst_p += random.sample(res_p, 5)
+        lst = random.sample(res_p['entries'], 5)
+        name_lst = [i['summonerName'] for i in lst]
 
-    name_lst = [i['summonerName'] for i in lst_p]
-    # name_lst = list(map(lambda x: x['summonerName'], lst_p))
+    elif tier_p == 'GM':
+        print(tier_p)
+        url_p = f'https://kr.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
+        res_p = requests.get(url_p).json()
+        lst = random.sample(res_p['entries'], 5)
+        name_lst = [i['summonerName'] for i in lst]
+
+    elif tier_p == 'MASTER':
+        print(tier_p)
+        url_p = f'https://kr.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
+        res_p = requests.get(url_p).json()
+        lst = random.sample(res_p['entries'], 5)
+        name_lst = [i['summonerName'] for i in lst]
+
+    else:
+        print(tier_p)
+        division_list_p = ['I', 'II', 'III', 'IV']
+        lst_p = []
+        for division_p in division_list_p:
+            page_p = random.randrange(1, 10)
+            url_p = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_p}/{division_p}?page={page_p}&api_key={mu.riot_api_key}'
+            res_p = requests.get(url_p).json()
+            lst_p += random.sample(res_p, 5)
+        name_lst = [i['summonerName'] for i in lst_p]
+        # name_lst = list(map(lambda x: x['summonerName'], lst_p))
+
     result_res = mu.match_timeline(name_lst, 3)
     result_df = pd.DataFrame(result_res, columns=['match_id', 'matches', 'timeline'])
     print('get_rawdata complete')
@@ -88,6 +117,7 @@ rawdata_df['timeline'][0]['info']['frames'][5]['participantFrames']['1']
 # return -> df
 # 함수 결과값(df)를 넣을 수 있는 테이블 생성, insert문까지
 # pk - (game_id, participantId)
+
 
 def get_match_timeline_df(df_p):
     df_creater = []
@@ -149,9 +179,7 @@ mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES_TIER', sql_conn)
 or_df = mu.oracle_execute('select * FROM LOL_MATCHES_TIER')
 
 
-def insert(t):
-    conn = mu.connect_mysql('lol_icia')
-    mu.oracle_open()
+def insert(t, conn):
     sql_insert = (f'insert into LOL_MATCHES_TIER (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
                   f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
                   f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
@@ -165,13 +193,27 @@ def insert(t):
                   f'{t.g_17}, {t.g_18}, {t.g_19}, {t.g_20}, {t.g_21}, {t.g_22}, '
                   f'{t.g_23}, {t.g_24}, {t.g_25}) '
                   )
-    mu.mysql_execute(sql_insert, conn)
-    conn.commit()
-    mu.oracle_execute(sql_insert)
-    conn.close()
-    mu.oracle_close()
+    try:
+        mu.mysql_execute(sql_insert, conn)
+        mu.oracle_execute(sql_insert)
+    except:
+        return
 
-for i in range(50):
-    tier = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GM', 'C']
-    idx = random.randrange(len(tier))
-    print(tier[idx])
+
+def auto_insert(num):
+    tqdm.pandas()
+    for count in tqdm(range(num)):
+        tier = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GM', 'C']
+        idx = random.randrange(len(tier))
+        rawdata_df = get_rawdata(tier[idx])
+        result_df = get_match_timeline_df(rawdata_df)
+        conn = mu.connect_mysql('lol_icia')
+        mu.oracle_open()
+        result_df.progress_apply(lambda x: insert(x, conn), axis=1)
+        conn.commit()
+        conn.close()
+        mu.oracle_close()
+        print(f'반복 {count+1}회 완료')
+    print('반복 완료')
+
+auto_insert(20)
