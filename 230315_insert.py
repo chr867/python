@@ -48,7 +48,8 @@ for idx, i in lst:
 # match_ids 가져오기
 # match,timeline rawdata -> (match_id, matches, timeline) df만들기
 #  return df
-
+import imp
+imp.reload(mu)
 
 def get_rawdata(tier_p):
     division_list_p = ['I', 'II', 'III', 'IV']
@@ -94,6 +95,8 @@ def get_match_timeline_df(df_p):
                'g_16', 'g_17',
                'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25']
     for m_idx, m in tqdm(enumerate(df_p['matches'])):
+        if m['info']['gameDuration'] < 900:
+            continue
         for p in m['info']['participants']:
             df_creater.append([
                 m['metadata']['matchId'], m['info']['gameDuration'], m['info']['gameVersion'],
@@ -113,3 +116,41 @@ def get_match_timeline_df(df_p):
     return sum_df
 
 result_df = get_match_timeline_df(rawdata_df)
+
+sql_conn = mu.connect_mysql('lol_icia')
+sql_create = '''
+CREATE TABLE LOL_MATCHES_TIER ( match_id varchar(20), gameDuration int, gameVersion varchar(20), summonerName varchar(20),
+summonerLevel int, participantId int, championName varchar(20), champExperience int, teamPosition varchar(10), teamId int,
+win varchar(10), kills int, deaths int, assists int, totalDamageDealtToChampions int, totalDamageTaken int, 
+g_5 int, g_6 int, g_7 int, g_8 int, g_9 int, g_10 int, g_11 int, g_12 int, g_13 int, g_14 int, g_15 int, g_16 int,
+g_17 int, g_18 int, g_19 int, g_20 int, g_21 int, g_22 int, g_23 int, g_24 int, g_25 int,
+CONSTRAINT LMT_PK_ID_PID PRIMARY KEY (match_id, participantId))
+'''
+mu.mysql_execute(sql_create, sql_conn)
+sql_conn.close()
+
+sql_conn = mu.connect_mysql('lol_icia')
+tqdm.pandas()
+
+result_df.progress_apply(lambda x: insert(x, sql_conn), axis=1)
+mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES_TIER', sql_conn)
+sql_conn.commit()
+sql_conn.close()
+def insert(t, conn):
+    sql_insert = (f'insert into LOL_MATCHES_TIER (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
+                  f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
+                  f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
+                  f'g_11, g_12, g_13, g_14, g_15, g_16, g_17, g_18, g_19, g_20, g_21, g_22, g_23, g_24, g_25)'
+                  f'VALUES({repr(t.match_id)}, {t.gameDuration}, {repr(t.gameVersion)}, '
+                  f'{repr(t.summonerName)}, {t.summonerLevel}, {t.participantId}, {repr(t.championName)}, '
+                  f'{t.champExperience}, {repr(t.teamPosition)}, {t.teamId}, {repr(str(t.win))}, {t.kills}, '
+                  f'{t.deaths}, {t.assists}, {t.totalDamageDealtToChampions}, {t.totalDamageTaken}, '
+                  f'{t.g_5}, {t.g_6}, {t.g_7}, {t.g_8}, {t.g_9}, {t.g_10}, '
+                  f'{t.g_11}, {t.g_12}, {t.g_13}, {t.g_14}, {t.g_15}, {t.g_16}, '
+                  f'{t.g_17}, {t.g_18}, {t.g_19}, {t.g_20}, {t.g_21}, {t.g_22}, '
+                  f'{t.g_23}, {t.g_24}, {t.g_25}) '
+                  )
+    mu.mysql_execute(sql_insert, conn)
+
+
+

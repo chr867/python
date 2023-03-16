@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 dsn = cx_Oracle.makedsn('localhost', 1521, 'xe')
 seoul_api_key = '77676c6c566368723431555642674c'
-riot_api_key = 'RGAPI-c521319d-2c76-452d-8541-530c2020422e'
+riot_api_key = 'RGAPI-ed7fe87f-8eb1-4233-b1fc-ff04f0c08752'
 
 # Oracle
 
