@@ -129,19 +129,32 @@ CONSTRAINT LMT_PK_ID_PID PRIMARY KEY (match_id, participantId))
 mu.mysql_execute(sql_create, sql_conn)
 sql_conn.close()
 
-sql_conn = mu.connect_mysql('lol_icia')
-tqdm.pandas()
+mu.oracle_open()
+oracle_create = '''
+CREATE TABLE LOL_MATCHES_TIER ( match_id varchar(20), gameDuration number, gameVersion varchar(20), summonerName varchar(50),
+summonerLevel number, participantId number, championName varchar(20), champExperience number, teamPosition varchar(10), teamId number,
+win varchar(10), kills number, deaths number, assists number, totalDamageDealtToChampions number, totalDamageTaken number, 
+g_5 number, g_6 number, g_7 number, g_8 number, g_9 number, g_10 number, g_11 number, g_12 number, g_13 number, g_14 number, g_15 number, g_16 number,
+g_17 number, g_18 number, g_19 number, g_20 number, g_21 number, g_22 number, g_23 number, g_24 number, g_25 number,
+CONSTRAINT LMT_PK_ID_PID PRIMARY KEY (match_id, participantId))
+'''
+mu.oracle_execute(oracle_create)
 
+sql_conn = mu.connect_mysql('lol_icia')
 result_df.progress_apply(lambda x: insert(x, sql_conn), axis=1)
 mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES_TIER', sql_conn)
 sql_conn.commit()
 sql_conn.close()
+mu.oracle_close()
+
+or_df = mu.oracle_execute('select * FROM LOL_MATCHES_TIER')
+
 def insert(t, conn):
     sql_insert = (f'insert into LOL_MATCHES_TIER (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
                   f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
                   f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
                   f'g_11, g_12, g_13, g_14, g_15, g_16, g_17, g_18, g_19, g_20, g_21, g_22, g_23, g_24, g_25)'
-                  f'VALUES({repr(t.match_id)}, {t.gameDuration}, {repr(t.gameVersion)}, '
+                  f'VALUES({repr(t.match_id)}, {t.gameDuration}, {repr(str(t.gameVersion))}, '
                   f'{repr(t.summonerName)}, {t.summonerLevel}, {t.participantId}, {repr(t.championName)}, '
                   f'{t.champExperience}, {repr(t.teamPosition)}, {t.teamId}, {repr(str(t.win))}, {t.kills}, '
                   f'{t.deaths}, {t.assists}, {t.totalDamageDealtToChampions}, {t.totalDamageTaken}, '
@@ -151,6 +164,8 @@ def insert(t, conn):
                   f'{t.g_23}, {t.g_24}, {t.g_25}) '
                   )
     mu.mysql_execute(sql_insert, conn)
+    conn.commit()
+    mu.oracle_execute(sql_insert)
 
 
 
