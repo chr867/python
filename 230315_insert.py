@@ -52,6 +52,7 @@ import imp
 imp.reload(mu)
 
 def get_rawdata(tier_p):
+
     division_list_p = ['I', 'II', 'III', 'IV']
     lst_p = []
     for division_p in division_list_p:
@@ -68,7 +69,8 @@ def get_rawdata(tier_p):
     return result_df
 
 rawdata_df = get_rawdata('SILVER')
-
+rawdata_df['matches'][0]['info']['participants'][0].keys()
+rawdata_df['timeline'][0]['info']['frames'][5]['participantFrames']['1']
 
 # match - ['match_id' 인포,'gameDuration' 인포,'gameVersion' 인포,'summonerName' 인포>파티,'summonerLevel'인포->파티,'participantId'인포->파티
 # , 'championName' 인포->파티, 'champExperience' 인포->파티,'teamPosition' 인포->파티, 'teamId' 인포->파티, 'win' 인포->파티,
@@ -86,6 +88,7 @@ rawdata_df = get_rawdata('SILVER')
 # return -> df
 # 함수 결과값(df)를 넣을 수 있는 테이블 생성, insert문까지
 # pk - (game_id, participantId)
+
 def get_match_timeline_df(df_p):
     df_creater = []
     columns = ['match_id', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId',
@@ -139,17 +142,16 @@ g_17 number, g_18 number, g_19 number, g_20 number, g_21 number, g_22 number, g_
 CONSTRAINT LMT_PK_ID_PID PRIMARY KEY (match_id, participantId))
 '''
 mu.oracle_execute(oracle_create)
-
-sql_conn = mu.connect_mysql('lol_icia')
-result_df.progress_apply(lambda x: insert(x, sql_conn), axis=1)
-mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES_TIER', sql_conn)
-sql_conn.commit()
-sql_conn.close()
 mu.oracle_close()
 
+result_df.progress_apply(lambda x: insert(x, sql_conn), axis=1)
+mu.mysql_execute_dict('SELECT * FROM LOL_MATCHES_TIER', sql_conn)
 or_df = mu.oracle_execute('select * FROM LOL_MATCHES_TIER')
 
-def insert(t, conn):
+
+def insert(t):
+    conn = mu.connect_mysql('lol_icia')
+    mu.oracle_open()
     sql_insert = (f'insert into LOL_MATCHES_TIER (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
                   f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
                   f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
@@ -166,6 +168,10 @@ def insert(t, conn):
     mu.mysql_execute(sql_insert, conn)
     conn.commit()
     mu.oracle_execute(sql_insert)
+    conn.close()
+    mu.oracle_close()
 
-
-
+for i in range(50):
+    tier = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GM', 'C']
+    idx = random.randrange(len(tier))
+    print(tier[idx])
