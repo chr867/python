@@ -59,38 +59,39 @@ t_lst[0]['summonerName']
 
 
 def get_rawdata(tier_p):
-    if tier_p == 'C':
-        print(tier_p)
-        url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
-        res_p = requests.get(url_p).json()
-        lst = random.sample(res_p['entries'], 5)
-        name_lst = [i['summonerName'] for i in lst]
-
-    elif tier_p == 'GM':
-        print(tier_p)
-        url_p = f'https://kr.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
-        res_p = requests.get(url_p).json()
-        lst = random.sample(res_p['entries'], 5)
-        name_lst = [i['summonerName'] for i in lst]
-
-    elif tier_p == 'MASTER':
-        print(tier_p)
-        url_p = f'https://kr.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
-        res_p = requests.get(url_p).json()
-        lst = random.sample(res_p['entries'], 5)
-        name_lst = [i['summonerName'] for i in lst]
-
-    else:
-        print(tier_p)
-        division_list_p = ['I', 'II', 'III', 'IV']
-        lst_p = []
-        for division_p in division_list_p:
-            page_p = random.randrange(1, 10)
-            url_p = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_p}/{division_p}?page={page_p}&api_key={mu.riot_api_key}'
+    match tier_p:
+        case 'C':
+            print(tier_p)
+            url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
             res_p = requests.get(url_p).json()
-            lst_p += random.sample(res_p, 5)
-        name_lst = [i['summonerName'] for i in lst_p]
-        # name_lst = list(map(lambda x: x['summonerName'], lst_p))
+            lst = random.sample(res_p['entries'], 5)
+            name_lst = [i['summonerName'] for i in lst]
+
+        case 'GM':
+            print(tier_p)
+            url_p = f'https://kr.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
+            res_p = requests.get(url_p).json()
+            lst = random.sample(res_p['entries'], 5)
+            name_lst = [i['summonerName'] for i in lst]
+
+        case 'MASTER':
+            print(tier_p)
+            url_p = f'https://kr.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
+            res_p = requests.get(url_p).json()
+            lst = random.sample(res_p['entries'], 5)
+            name_lst = [i['summonerName'] for i in lst]
+
+        case _:
+            print(tier_p)
+            division_list_p = ['I', 'II', 'III', 'IV']
+            lst_p = []
+            for division_p in division_list_p:
+                page_p = random.randrange(1, 10)
+                url_p = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier_p}/{division_p}?page={page_p}&api_key={mu.riot_api_key}'
+                res_p = requests.get(url_p).json()
+                lst_p += random.sample(res_p, 5)
+            name_lst = [i['summonerName'] for i in lst_p]
+            # name_lst = list(map(lambda x: x['summonerName'], lst_p))
 
     result_res = mu.match_timeline(name_lst, 3)
     result_df = pd.DataFrame(result_res, columns=['match_id', 'matches', 'timeline'])
@@ -197,6 +198,7 @@ def insert(t, conn):
         mu.mysql_execute(sql_insert, conn)
         mu.oracle_execute(sql_insert)
     except:
+        print('insert 예외 발생')
         return
 
 
@@ -217,3 +219,5 @@ def auto_insert(num):
     print('반복 완료')
 
 auto_insert(20)
+
+test_df = get_rawdata('C')
