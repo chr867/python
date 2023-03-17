@@ -77,22 +77,48 @@ def get_match_timeline_df(df_p):
 
 
 def insert(t, conn):
-    sql_insert = (f'insert into LOL_MATCHES_TIER (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
-                  f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
-                  f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
-                  f'g_11, g_12, g_13, g_14, g_15, g_16, g_17, g_18, g_19, g_20, g_21, g_22, g_23, g_24, g_25)'
-                  f'VALUES({repr(t.match_id)}, {t.gameDuration}, {repr(str(t.gameVersion))}, '
-                  f'{repr(t.summonerName)}, {t.summonerLevel}, {t.participantId}, {repr(t.championName)}, '
-                  f'{t.champExperience}, {repr(t.teamPosition)}, {t.teamId}, {repr(str(t.win))}, {t.kills}, '
-                  f'{t.deaths}, {t.assists}, {t.totalDamageDealtToChampions}, {t.totalDamageTaken}, '
-                  f'{t.g_5}, {t.g_6}, {t.g_7}, {t.g_8}, {t.g_9}, {t.g_10}, '
-                  f'{t.g_11}, {t.g_12}, {t.g_13}, {t.g_14}, {t.g_15}, {t.g_16}, '
-                  f'{t.g_17}, {t.g_18}, {t.g_19}, {t.g_20}, {t.g_21}, {t.g_22}, '
-                  f'{t.g_23}, {t.g_24}, {t.g_25}) '
-                  )
+    oracle_insert = (
+        f'MERGE INTO LOL_MATCHES_TIER USING DUAL ON(match_id={repr(t.match_id)} and participantId = {t.participantId}) '
+        f'WHEN NOT MATCHED THEN '
+        f'insert (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
+        f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
+        f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
+        f'g_11, g_12, g_13, g_14, g_15, g_16, g_17, g_18, g_19, g_20, g_21, g_22, g_23, g_24, g_25) '
+        f'VALUES({repr(t.match_id)}, {t.gameDuration}, {repr(str(t.gameVersion))}, '
+        f'{repr(t.summonerName)}, {t.summonerLevel}, {t.participantId}, {repr(t.championName)}, '
+        f'{t.champExperience}, {repr(t.teamPosition)}, {t.teamId}, {repr(str(t.win))}, {t.kills}, '
+        f'{t.deaths}, {t.assists}, {t.totalDamageDealtToChampions}, {t.totalDamageTaken}, '
+        f'{t.g_5}, {t.g_6}, {t.g_7}, {t.g_8}, {t.g_9}, {t.g_10}, '
+        f'{t.g_11}, {t.g_12}, {t.g_13}, {t.g_14}, {t.g_15}, {t.g_16}, '
+        f'{t.g_17}, {t.g_18}, {t.g_19}, {t.g_20}, {t.g_21}, {t.g_22}, '
+        f'{t.g_23}, {t.g_24}, {t.g_25}) '
+        )
+
+    sql_insert = (
+        f'insert into LOL_MATCHES_TIER (match_id, gameDuration, gameVersion, summonerName, summonerLevel, '
+        f'participantId, championName, champExperience, teamPosition, teamId, win, kills, deaths,'
+        f'assists, totalDamageDealtTochampions, totalDamageTaken, g_5, g_6, g_7, g_8, g_9, g_10,'
+        f'g_11, g_12, g_13, g_14, g_15, g_16, g_17, g_18, g_19, g_20, g_21, g_22, g_23, g_24, g_25) '
+        f'VALUES({repr(t.match_id)}, {t.gameDuration}, {repr(str(t.gameVersion))}, '
+        f'{repr(t.summonerName)}, {t.summonerLevel}, {t.participantId}, {repr(t.championName)}, '
+        f'{t.champExperience}, {repr(t.teamPosition)}, {t.teamId}, {repr(str(t.win))}, {t.kills}, '
+        f'{t.deaths}, {t.assists}, {t.totalDamageDealtToChampions}, {t.totalDamageTaken}, '
+        f'{t.g_5}, {t.g_6}, {t.g_7}, {t.g_8}, {t.g_9}, {t.g_10}, '
+        f'{t.g_11}, {t.g_12}, {t.g_13}, {t.g_14}, {t.g_15}, {t.g_16}, {t.g_17}, {t.g_18}, {t.g_19}, {t.g_20}, {t.g_21},'
+        f'{t.g_22}, {t.g_23}, {t.g_24}, {t.g_25}) '
+        f'ON DUPLICATE KEY UPDATE '
+        f'match_id = {repr(t.match_id)}, gameDuration = {t.gameDuration}, gameVersion = {repr(str(t.gameVersion))}, '
+        f'summonerName = {repr(t.summonerName)}, summonerLevel = {t.summonerLevel}, participantId = {t.participantId}, '
+        f'championName = {repr(t.championName)}, champExperience = {t.champExperience}, teamPosition = {repr(t.teamPosition)}, '
+        f'teamId = {repr(t.teamId)}, win = {repr(str(t.win))}, kills = {t.kills}, deaths = {t.deaths}, assists = {t.assists}, '
+        f'totalDamageDealtToChampions = {t.totalDamageDealtToChampions}, totalDamageTaken = {t.totalDamageTaken}, '
+        f'g_5 = {t.g_5}, g_6 = {t.g_6}, g_7 = {t.g_7}, g_8 = {t.g_8}, g_9 = {t.g_9}, g_10 = {t.g_10}, g_11 = {t.g_11}, '
+        f'g_12 = {t.g_12}, g_13 = {t.g_13}, g_14 = {t.g_14}, g_15 = {t.g_15}, g_16 = {t.g_16}, g_17 = {t.g_17}, g_18 = {t.g_18}, '
+        f'g_19 = {t.g_19}, g_20 = {t.g_20}, g_21 = {t.g_21}, g_22 = {t.g_22}, g_23 = {t.g_23}, g_24 = {t.g_24}, g_25 = {t.g_25} '
+    )
     try:
         mu.mysql_execute(sql_insert, conn)
-        mu.oracle_execute(sql_insert)
+        mu.oracle_execute(oracle_insert)
     except:
         print('insert 예외 발생')
         return

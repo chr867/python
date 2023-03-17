@@ -1,5 +1,4 @@
 import time
-
 import pandas as pd
 import pymysql
 import cx_Oracle
@@ -8,7 +7,7 @@ from tqdm import tqdm
 
 dsn = cx_Oracle.makedsn('localhost', 1521, 'xe')
 seoul_api_key = '77676c6c566368723431555642674c'
-riot_api_key = 'RGAPI-ed7fe87f-8eb1-4233-b1fc-ff04f0c08752'
+riot_api_key = 'RGAPI-3db66a61-7ff5-402a-b42a-3e11c1cdfd3e'
 
 # Oracle
 
