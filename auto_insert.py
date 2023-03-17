@@ -3,6 +3,7 @@ import pandas as pd
 import my_utils as mu
 from tqdm import tqdm
 import random
+import time
 
 
 def get_rawdata(tier_p):
@@ -119,8 +120,8 @@ def insert(t, conn):
     try:
         mu.mysql_execute(sql_insert, conn)
         mu.oracle_execute(oracle_insert)
-    except:
-        print('insert 예외 발생')
+    except Exception as e:
+        print(f'insert {e}예외 발생')
         return
 
 
@@ -139,3 +140,4 @@ def auto_insert(num):
         mu.oracle_close()
         print(f'반복 {count+1}회 완료')
     print('반복 완료')
+    # time.sleep(60)

@@ -50,7 +50,7 @@ for idx, i in lst:
 # match,timeline rawdata -> (match_id, matches, timeline) df만들기
 #  return df
 import imp
-imp.reload(ai)
+imp.reload(mu)
 
 url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
 res_p = requests.get(url_p).json()
@@ -60,7 +60,7 @@ t_lst[0]['summonerName']
 
 
 def get_rawdata(tier_p):
-    match tier_p:
+    match tier_p:  # match, case로 챌그마 구간 걸러내기 (python 3.10)
         case 'C':
             print(tier_p)
             url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
@@ -254,13 +254,13 @@ def insert(t, conn):
         return
 
 
-def auto_insert(num):
+def auto_insert(num):  # num 횟 수 만큼 반복
     tqdm.pandas()
     for count in tqdm(range(num)):
         tier = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GM', 'C']
         idx = random.randrange(len(tier))
-        rawdata_df = get_rawdata(tier[idx])
-        result_df = get_match_timeline_df(rawdata_df)
+        rawdata_df = get_rawdata(tier[idx])  # 랜덤 티어로 rawdata 생성
+        result_df = get_match_timeline_df(rawdata_df)  # rawdata 정제
         conn = mu.connect_mysql('lol_icia')
         mu.oracle_open()
         result_df.progress_apply(lambda x: insert(x, conn), axis=1)
@@ -270,4 +270,4 @@ def auto_insert(num):
         print(f'반복 {count+1}회 완료')
     print('반복 완료')
 
-ai.auto_insert(5)
+ai.auto_insert(100)

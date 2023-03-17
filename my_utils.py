@@ -76,7 +76,13 @@ def df_creater(url):
     return df
 
 
+#  롤 데이터
 def match_timeline(summoner_name, num):
+    """
+    :param summoner_name: 소환사 명(한글) list
+    :param num: 명당 불러올 게임 수
+    :return: 정제된 df
+    """
     result = []
 
     def get_puuid(summoner_name_p):
@@ -107,8 +113,8 @@ def match_timeline(summoner_name, num):
     for n in tqdm(summoner_name):
         try:
             get_puuid(n)
-        except:
-            print(n, '예외 발생')
+        except Exception as e:
+            print(n, f'{e} 예외 발생')
             continue
     print('match_timeline complete')
     return result
