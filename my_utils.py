@@ -77,7 +77,7 @@ def df_creater(url):
 
 
 #  롤 데이터
-def match_timeline(summoner_name, num):
+def match_timeline(summoner_name=[], num=int):
     """
     :param summoner_name: 소환사 명(한글) list
     :param num: 명당 불러올 게임 수

@@ -49,12 +49,12 @@ def get_rawdata(tier_p):
 
 def get_match_timeline_df(df_p):
     df_creater = []
-    columns = ['match_id', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId',
-               'championName', 'champExperience',
-               'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists', 'totalDamageDealtToChampions',
-               'totalDamageTaken', 'g_5', 'g_6', 'g_7', 'g_8', 'g_9', 'g_10', 'g_11', 'g_12', 'g_13', 'g_14', 'g_15',
-               'g_16', 'g_17',
-               'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25']
+    columns = [
+        'match_id', 'gameDuration', 'gameVersion', 'summonerName', 'summonerLevel', 'participantId', 'championName',
+        'champExperience', 'teamPosition', 'teamId', 'win', 'kills', 'deaths', 'assists', 'totalDamageDealtToChampions',
+        'totalDamageTaken', 'g_5', 'g_6', 'g_7', 'g_8', 'g_9', 'g_10', 'g_11', 'g_12', 'g_13', 'g_14', 'g_15', 'g_16',
+        'g_17', 'g_18', 'g_19', 'g_20', 'g_21', 'g_22', 'g_23', 'g_24', 'g_25'
+        ]
     for m_idx, m in tqdm(enumerate(df_p['matches'])):
         if m['info']['gameDuration'] < 900:
             continue
@@ -125,7 +125,10 @@ def insert(t, conn):
         return
 
 
-def auto_insert(num):
+def auto_insert(num=int):
+    """
+    :param num: 반복 횟 수
+    """
     tqdm.pandas()
     for count in tqdm(range(num)):
         tier = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND', 'MASTER', 'GM', 'C']
