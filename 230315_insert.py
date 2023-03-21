@@ -100,8 +100,10 @@ def get_rawdata(tier_p):
     return result_df
 
 rawdata_df = get_rawdata('SILVER')
+
 rawdata_df['matches'][0]['info']['participants'][0].keys()
-rawdata_df['timeline'][0]['info']['frames'][5]['participantFrames']['1']
+
+rawdata_df['timeline'][0]['info']['frames'][5]['events']
 
 # match - ['match_id' 인포,'gameDuration' 인포,'gameVersion' 인포,'summonerName' 인포>파티,'summonerLevel'인포->파티,'participantId'인포->파티
 # , 'championName' 인포->파티, 'champExperience' 인포->파티,'teamPosition' 인포->파티, 'teamId' 인포->파티, 'win' 인포->파티,

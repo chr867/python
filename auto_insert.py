@@ -3,7 +3,6 @@ import pandas as pd
 import my_utils as mu
 from tqdm import tqdm
 import random
-import time
 
 
 def get_rawdata(tier_p):
@@ -60,11 +59,22 @@ def get_match_timeline_df(df_p):
             continue
         for p in m['info']['participants']:
             df_creater.append([
-                m['metadata']['matchId'], m['info']['gameDuration'], m['info']['gameVersion'],
-                p['summonerName'], p['summonerLevel'], p['participantId'], p['championName'],
-                p['champExperience'], p['teamPosition'], p['teamId'], p['win'],
-                p['kills'], p['deaths'], p['assists'], p['totalDamageDealtToChampions'],
-                p['totalDamageTaken'],
+                m['metadata']['matchId'],
+                m['info']['gameDuration'],
+                m['info']['gameVersion'],
+                p['summonerName'],
+                p['summonerLevel'],
+                p['participantId'],
+                p['championName'],
+                p['champExperience'],
+                p['teamPosition'],
+                p['teamId'],
+                p['win'],
+                p['kills'],
+                p['deaths'],
+                p['assists'],
+                p['totalDamageDealtToChampions'],
+                p['totalDamageTaken']
             ])
             for t in range(5, 26):
                 try:
