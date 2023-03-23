@@ -48,6 +48,7 @@ events = list(map(lambda x: x['events'], raw_data.iloc[0]['timeline']['info']['f
 events
 
 tmp_lst = []
+
 for i in events:
     tmp_lst += i
 
@@ -75,3 +76,26 @@ col_lst = ['gamdId', 'gameDuration', 'gameVersion', 'bans', 'killerId', 'victimI
 
 df_creater = [[gameId, gameDuration, gameVersion, ban_lst, k_lst, d_lst, a_lst]]
 result_df = pd.DataFrame(df_creater, columns=col_lst)
+
+
+def get_event(df):
+    blue_team = []
+    red_team = []
+    for idx, i in enumerate(df['matches']):
+        blue_team.append(list(map(lambda x: str(x['championId']), i['info']['teams'][0]['bans'])))
+        red_team.append(list(map(lambda x: str(x['championId']), i['info']['teams'][1]['bans'])))
+    print(blue_team, red_team)
+
+get_event(raw_data)
+
+blue_team = []
+red_team = []
+for idx, i in enumerate(raw_data['matches']):
+    blue_team.append(list(map(lambda x: str(x['championId']), raw_data.iloc[idx].matches['info']['teams'][0]['bans'])))
+    red_team.append(list(map(lambda x: str(x['championId']), raw_data.iloc[idx].matches['info']['teams'][1]['bans'])))
+print(blue_team, red_team)
+
+test_ban = []
+for i in range(len(blue_team)):
+    test_ban.append(list(set(blue_team[i]+red_team[i])))
+
