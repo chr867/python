@@ -37,13 +37,12 @@ for idx, i in enumerate(raw_data['matches']):
             firstDT = 0
 
         laneTower = 0
-        laneTowerTime = ''
+        laneTowerTime = []
         for k in tower_log:
-            if k['killerId'] == participantId:
-                laneTower = laneTower+1
-                laneTowerTime += str(k['timestamp'])+' '
-        if laneTowerTime == '':
-            laneTowerTime = '0'
+            if k['buildingType'] == 'TOWER_BUILDING':
+                if k['killerId'] == participantId:
+                    laneTower = laneTower+1
+                    laneTowerTime.append(k['timestamp'])
         kill_log = [i for i in tmp_lst2 if i['type'] == 'CHAMPION_KILL']
         k = [i['killerId'] for i in kill_log]
         d = [i['victimId'] for i in kill_log]
