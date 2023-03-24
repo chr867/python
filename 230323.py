@@ -48,7 +48,6 @@ events = list(map(lambda x: x['events'], raw_data.iloc[0]['timeline']['info']['f
 events
 
 tmp_lst = []
-
 for i in events:
     tmp_lst += i
 
@@ -79,23 +78,46 @@ result_df = pd.DataFrame(df_creater, columns=col_lst)
 
 
 def get_event(df):
-    blue_team = []
-    red_team = []
+    df_creater_test = [ ]
     for idx, i in enumerate(df['matches']):
-        blue_team.append(list(map(lambda x: str(x['championId']), i['info']['teams'][0]['bans'])))
-        red_team.append(list(map(lambda x: str(x['championId']), i['info']['teams'][1]['bans'])))
-    print(blue_team, red_team)
+        df_creater_test.append([
+            i['info']['gameId'],
+            i['info']['gameDuration'],
+            i['info']['gameVersion']
+        ])
+    
+        # bans
+        blue_test = list(map(lambda x: str(x['championId']), i['info']['teams'][0]['bans']))
+        red_test = list(map(lambda x: str(x['championId']), i['info']['teams'][1]['bans']))
+        ban_test = list(set(blue_test + red_test))
+        ban_lst_test = '|'.join(ban_test)
+        df_creater_test[-1].append(ban_lst_test)
+    
+        # CHMAPION_KILL
+        events_test = list(map(lambda x: x['events'], df.iloc[idx]['timeline']['info']['frames']))
+        tmp_lst2 = []
+        for i in events_test:
+            tmp_lst2 += i
+    
+        def assist(event):
+            try:
+                return event['assistingParticipantIds']
+            except:
+                return ' '
 
-get_event(raw_data)
+        kill_log = [i for i in tmp_lst2 if i['type'] == 'CHAMPION_KILL']
+        k = [i['killerId'] for i in kill_log]
+        d = [i['victimId'] for i in kill_log]
+        a = [assist(i) for i in kill_log]
+        k_lst = '|'.join(map(str, k))
+        d_lst = '|'.join(map(str, d))
+        a_lst = '|'.join(map(str, a))
+        df_creater_test[-1].append(k_lst)
+        df_creater_test[-1].append(d_lst)
+        df_creater_test[-1].append(a_lst)
+        
+    col_lst = ['gamdId', 'gameDuration', 'gameVersion', 'bans', 'killerId', 'victimId', 'assistId']
+    result_df = pd.DataFrame(df_creater_test, columns=col_lst)
+    return result_df
 
-blue_team = []
-red_team = []
-for idx, i in enumerate(raw_data['matches']):
-    blue_team.append(list(map(lambda x: str(x['championId']), raw_data.iloc[idx].matches['info']['teams'][0]['bans'])))
-    red_team.append(list(map(lambda x: str(x['championId']), raw_data.iloc[idx].matches['info']['teams'][1]['bans'])))
-print(blue_team, red_team)
-
-test_ban = []
-for i in range(len(blue_team)):
-    test_ban.append(list(set(blue_team[i]+red_team[i])))
-
+test_df = get_event(raw_data)
