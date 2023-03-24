@@ -35,6 +35,7 @@ raw_data.iloc[0]['timeline']['info']['frames'][1].keys()
 events = list(map(lambda x: x['events'], raw_data.iloc[0]['timeline']['info']['frames']))
 events
 
+
 tmp_lst = []
 for i in events:
     tmp_lst += i
@@ -66,41 +67,45 @@ result_df = pd.DataFrame(df_creater, columns=col_lst)
 
 
 def get_event(df):
-    df_creater_test = [ ]
+    df_creater_test = []
     for idx, i in enumerate(df['matches']):
-        gameId = i['info']['gameId'],
-        gameDuration = i['info']['gameDuration'],
+        gameId = i['info']['gameId']
+        gameDuration = i['info']['gameDuration']
         gameVersion = i['info']['gameVersion']
+        for j in range(10):
+            # bans
+            blue_test = [str(i['championId']) for i in i['info']['teams'][0]['bans']]
+            red_test = [str(i['championId']) for i in i['info']['teams'][1]['bans']]
+            ban_test = list(set(blue_test + red_test))
+            bans = '|'.join(ban_test)
 
-        # bans
-        blue_test = list(map(lambda x: str(x['championId']), i['info']['teams'][0]['bans']))
-        red_test = list(map(lambda x: str(x['championId']), i['info']['teams'][1]['bans']))
-        ban_test = list(set(blue_test + red_test))
-        bans = '|'.join(ban_test)
+            # CHMAPION_KILL
+            # events_test = list(map(lambda x: x['events'], df.iloc[idx]['timeline']['info']['frames']))
+            events_test = [i['events'] for i in df.iloc[idx]['timeline']['info']['frames']]
+            tmp_lst2 = [element for array in events_test for element in array]
 
-        # CHMAPION_KILL
-        events_test = list(map(lambda x: x['events'], df.iloc[idx]['timeline']['info']['frames']))
-        tmp_lst2 = []
-        for i in events_test:
-            tmp_lst2 += i
-    
-        def assist(event):
-            try:
-                return event['assistingParticipantIds']
-            except:
-                return ' '
+            kill_log = [i for i in tmp_lst2 if i['type'] == 'CHAMPION_KILL']
+            # kill_log = list(filter(lambda x:x['type'] == 'CHAMPION_KILL', tmp_lst2))
+            # kill_log = list(map(lambda x: list(filter(lambda z: z['type'] == 'CHAMPION_KILL', x['events'])), df.iloc[idx]['timeline']['info']['frames']))
+            # kill_log = [element for array in kill_log for element in array]
 
-        kill_log = [i for i in tmp_lst2 if i['type'] == 'CHAMPION_KILL']
-        k = [i['killerId'] for i in kill_log]
-        d = [i['victimId'] for i in kill_log]
-        a = [assist(i) for i in kill_log]
-        k_lst = '|'.join(map(str, k))
-        d_lst = '|'.join(map(str, d))
-        a_lst = '|'.join(map(str, a))
-        df_creater_test.append([gameId, gameDuration, gameVersion, bans, k_lst, d_lst, a_lst])
+            # k = list(map(lambda x: str(x['killerId']), kill_log))
+            k = [i['killerId'] for i in kill_log]
+            d = [i['victimId'] for i in kill_log]
+            k_lst = '|'.join(map(str, k))
+            d_lst = '|'.join(map(str, d))
 
+            def assist(event):
+                try:
+                    return event['assistingParticipantIds']
+                except:
+                    return ' '
+            a = [assist(i) for i in kill_log]
+            a_lst = '|'.join(map(str, a))
+            df_creater_test.append([gameId, gameDuration, gameVersion, bans, k_lst, d_lst, a_lst])
     col_lst = ['gamdId', 'gameDuration', 'gameVersion', 'bans', 'killerId', 'victimId', 'assistId']
     result_df = pd.DataFrame(df_creater_test, columns=col_lst)
     return result_df
 
 test_df = get_event(raw_data)
+
