@@ -3,7 +3,6 @@ import my_utils as mu
 import auto_insert as ai
 import pandas as pd
 tqdm.pandas()
-
 raw_data = ai.get_rawdata('DIAMOND')
 
 # lambda를 활용해서  blue_ban, red_ban 리스트 생성
@@ -11,17 +10,6 @@ raw_data = ai.get_rawdata('DIAMOND')
 # 리스트 안의 요소를 |로 묶어서 str형태로 만들기
 
 raw_data.iloc[0].matches['info']['teams'][0]['bans']
-
-# blue_lst = [i['info']['teams'][0]['bans'] for i in raw_data['matches']]
-# red_lst = [i['info']['teams'][1]['bans'] for i in raw_data['matches']]
-# ban_lst = list(set(blue_lst+red_lst))
-# result = []
-#
-# for i in ban_lst:
-#     print(i)
-#     for j in i:
-#         print(j['championId'])
-#         result.append('|'.join(j))
 
 blue_team = list(map(lambda x: str(x['championId']), raw_data.iloc[0].matches['info']['teams'][0]['bans']))
 red_team = list(map(lambda x: str(x['championId']), raw_data.iloc[0].matches['info']['teams'][1]['bans']))
@@ -80,19 +68,16 @@ result_df = pd.DataFrame(df_creater, columns=col_lst)
 def get_event(df):
     df_creater_test = [ ]
     for idx, i in enumerate(df['matches']):
-        df_creater_test.append([
-            i['info']['gameId'],
-            i['info']['gameDuration'],
-            i['info']['gameVersion']
-        ])
-    
+        gameId = i['info']['gameId'],
+        gameDuration = i['info']['gameDuration'],
+        gameVersion = i['info']['gameVersion']
+
         # bans
         blue_test = list(map(lambda x: str(x['championId']), i['info']['teams'][0]['bans']))
         red_test = list(map(lambda x: str(x['championId']), i['info']['teams'][1]['bans']))
         ban_test = list(set(blue_test + red_test))
-        ban_lst_test = '|'.join(ban_test)
-        df_creater_test[-1].append(ban_lst_test)
-    
+        bans = '|'.join(ban_test)
+
         # CHMAPION_KILL
         events_test = list(map(lambda x: x['events'], df.iloc[idx]['timeline']['info']['frames']))
         tmp_lst2 = []
@@ -112,10 +97,8 @@ def get_event(df):
         k_lst = '|'.join(map(str, k))
         d_lst = '|'.join(map(str, d))
         a_lst = '|'.join(map(str, a))
-        df_creater_test[-1].append(k_lst)
-        df_creater_test[-1].append(d_lst)
-        df_creater_test[-1].append(a_lst)
-        
+        df_creater_test.append([gameId, gameDuration, gameVersion, bans, k_lst, d_lst, a_lst])
+
     col_lst = ['gamdId', 'gameDuration', 'gameVersion', 'bans', 'killerId', 'victimId', 'assistId']
     result_df = pd.DataFrame(df_creater_test, columns=col_lst)
     return result_df
