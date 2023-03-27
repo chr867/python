@@ -28,12 +28,13 @@ def assi_calc(x):
 
 
 def lane_processing(tower_lane, tower_team, lane, team):
-    if lane == 'TOP':
-        lane = 'TOP_LANE'
-    elif lane == 'MIDDLE':
-        lane = 'MID_LANE'
-    elif lane == 'BOTTOM':
-        lane = 'BOT_LANE'
+    match lane:
+        case 'TOP':
+            lane = 'TOP_LANE'
+        case 'MIDDLE':
+            lane = 'MID_LANE'
+        case 'BOTTOM':
+            lane = 'BOT_LANE'
     if (tower_lane == lane) and (tower_team == team):
         return 1
     else:
@@ -121,9 +122,9 @@ df = pd.DataFrame(df_create, columns=col_lst)
 # tmp라는 데이터프레임에 담기
 
 blue_df = df[df['teamId'] == 100]
-blue_df = blue_df[['gameVersion', 'matchId', 'teamPosition', 'participantId', 'championName', 'G15', 'teamId']]
+blue_df = blue_df[['gameVersion', 'matchId', 'teamPosition', 'win', 'participantId', 'championName', 'G15', 'teamId']]
 red_df = df[df['teamId'] == 200]
-red_df = red_df[['gameVersion', 'matchId', 'teamPosition', 'participantId', 'championName', 'G15', 'teamId']]
+red_df = red_df[['gameVersion', 'matchId', 'teamPosition', 'win', 'participantId', 'championName', 'G15', 'teamId']]
 
 
 tmp_df = pd.merge(blue_df, red_df, on=['matchId', 'teamPosition'])
@@ -137,7 +138,6 @@ tmp = tmp_df.append(tmp_df2)
 # kill_point라는 컬럼을 만들어서 (kills + assists /같은팀의 총 킬수)를 입력 (killerId를 이용하는방법 or kills를 이용하는 방법 )
 
 def lane_win(tmp_p):
-
     if tmp_p.G15_X > tmp_p.enemy_G15:
         return 1
     else:
@@ -157,9 +157,9 @@ def first_blood(x):
 
 
 tmp['first_blood'] = tmp.apply(lambda x: first_blood(x), axis=1)
+tmp[tmp.matchId == 'KR_6421601809']
 
 def kill_point(x):
-    sum = 0
     avg = 0
     for idx, i in enumerate(df['matchId']):
         if x.matchId == i:
@@ -167,10 +167,55 @@ def kill_point(x):
                 sum = df.iloc[idx]['kills'] + df.iloc[idx]['assists']
             if x.teamId_x == df.iloc[idx]['teamId']:
                 avg = avg + df.iloc[idx]['kills']
-                print(avg)
     return round(sum / avg * 100, 2)
 
 
 tmp['kill_point'] = tmp.apply(lambda x: kill_point(x), axis=1)
 
-tmp['kill_point']
+tmp['win'] = tmp.apply(lambda x: 1 if x.win_x is True else 0, axis=1)
+
+test = tmp[['matchId', 'championName_x', 'enemy_champ', 'teamPosition', 'win']]
+test[:20]
+cnt = test[['championName_x', 'enemy_champ', 'teamPosition', 'win']].groupby(
+    ['championName_x', 'enemy_champ', 'teamPosition']).count().rename(columns={'win': 'cnt'})
+
+tmp = raw_data.copy()
+win_cnt = test[['championName_x', 'enemy_champ', 'teamPosition', 'win']].groupby(
+    ['championName_x', 'enemy_champ', 'teamPosition']).sum().rename(columns={'win': 'win'})
+win_cnt
+
+result = cnt.join(win_cnt)
+result.reset_index(inplace=True)
+
+mu.oracle_open()
+df2 = mu.oracle_execute('select * from lol_datas')
+df2 = df2[(df2.GAMEDURATION > 900) & (df2.GAMEDURATION < 100000)]
+sample = df2[['GAMEID', 'CHAMPIONNAME', 'WIN', 'TEAMPOSITION', 'G_15', 'TEAMID']]
+sample['WIN'] = sample.apply(lambda x: 1 if x.WIN == 'True' else 0, axis=1)
+
+blue_team = sample[sample.TEAMID == 100]
+red_team = sample[sample.TEAMID == 200]
+
+blue_tmp = blue_team[['GAMEID', 'CHAMPIONNAME', 'TEAMPOSITION', 'G_15']].rename(
+    columns={'CHAMPIONNAME': 'enemy_champ', 'G_15': 'enemy_g15'})
+red_tmp = red_team[['GAMEID', 'CHAMPIONNAME', 'TEAMPOSITION', 'G_15']].rename(
+    columns={'CHAMPIONNAME': 'enemy_champ', 'G_15': 'enemy_g15'})
+
+blue_team_mg = pd.merge(blue_team, red_tmp, on=['GAMEID', 'TEAMPOSITION'])
+red_team_mg = pd.merge(red_team, blue_tmp, on=['GAMEID', 'TEAMPOSITION'])
+
+result = blue_team_mg.append(red_team_mg)
+win_df = result.copy()
+win_df['lane_win'] = win_df.apply(lambda x: 1 if x.G_15 > x.enemy_g15 else 0, axis=1)
+
+count_df = win_df[['CHAMPIONNAME', 'enemy_champ', 'TEAMPOSITION', 'WIN']].groupby(
+    ['CHAMPIONNAME', 'enemy_champ', 'TEAMPOSITION']).count().rename(columns={'WIN': 'cnt'})
+
+win_cnt_df = win_df[['CHAMPIONNAME', 'enemy_champ', 'TEAMPOSITION', 'WIN']].groupby(
+    ['CHAMPIONNAME', 'enemy_champ', 'TEAMPOSITION']).sum().rename(columns={'WIN': 'win'})
+
+lane_win_cnt_df = win_df[['CHAMPIONNAME', 'enemy_champ', 'TEAMPOSITION', 'lane_win']].groupby(
+    ['CHAMPIONNAME', 'enemy_champ', 'TEAMPOSITION']).sum().rename(columns={'lane_win': 'lane_win_cnt'})
+
+result_df = lane_win_cnt_df.join(win_cnt_df).join(count_df)
+result_df.sort_values(by='cnt', ascending=False)
