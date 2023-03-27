@@ -6,7 +6,7 @@ import requests
 import private
 from tqdm import tqdm
 dsn = cx_Oracle.makedsn('localhost', 1521, 'xe')
-seoul_api_key = '77676c6c566368723431555642674c'
+seoul_api_key = private.seoul_api_key
 riot_api_key = private.riot_api_key
 # Oracle
 
