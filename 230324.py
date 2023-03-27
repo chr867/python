@@ -9,6 +9,7 @@ tmp_lst = list(map(lambda x: x['events'], raw_data.iloc[0]['timeline']['info']['
 event_lst = [element for array in tmp_lst for element in array]
 tower_log = [i for i in event_lst if i['type'] == 'BUILDING_KILL']
 
+tower_log[0]
 
 df_creater_test = []
 for idx, i in enumerate(raw_data['matches']):
@@ -27,12 +28,13 @@ for idx, i in enumerate(raw_data['matches']):
         ban_test = list(set(blue_test + red_test))
         bans = '|'.join(ban_test)
 
-        # CHMAPION_KILL
+        # events
         events_test = [i['events'] for i in raw_data.iloc[idx]['timeline']['info']['frames']]
         tmp_lst2 = [element for array in events_test for element in array]
 
-        # firstDT
         tower_log = [i for i in tmp_lst2 if i['type'] == 'BUILDING_KILL']
+
+        # 변수
         try:
             ft_tower_lane = tower_log[0]['laneType']
             ft_tower_team = tower_log[0]['teamId']
@@ -48,10 +50,6 @@ for idx, i in enumerate(raw_data['matches']):
                 lane = 'BOT_LANE'
             case _:
                 lane = ''
-        if ft_tower_lane == lane and ft_tower_team == teamId:
-            firstDT = 1
-        else:
-            firstDT = 0
 
         # laneTower
         laneTower = 0
@@ -61,6 +59,13 @@ for idx, i in enumerate(raw_data['matches']):
                 if k['laneType'] == lane and k['teamId'] == teamId:
                     laneTower = 1
                     laneTowerTime = k['timestamp']
+        
+        #firstDT
+        if ft_tower_lane == lane and ft_tower_team == teamId:
+            firstDT = 1
+            laneTowerTime = tower_log[0]['timestamp']
+        else:
+            firstDT = 0
 
         # kill
         kill_log = [i for i in tmp_lst2 if i['type'] == 'CHAMPION_KILL']
