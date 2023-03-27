@@ -3,11 +3,11 @@ import pandas as pd
 import pymysql
 import cx_Oracle
 import requests
+import private
 from tqdm import tqdm
 dsn = cx_Oracle.makedsn('localhost', 1521, 'xe')
 seoul_api_key = '77676c6c566368723431555642674c'
-riot_api_key = 'RGAPI-dabbf3ca-9aa3-4f0e-83e0-c8336071fba6'
-
+riot_api_key = private.riot_api_key
 # Oracle
 
 

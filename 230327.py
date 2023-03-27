@@ -163,11 +163,14 @@ def kill_point(x):
     avg = 0
     for idx, i in enumerate(df['matchId']):
         if x.matchId == i:
-            if x.teamId_x == df.iloc[idx]['teamId'] and x.matchId == df.iloc[idx]['matchId'] and x.participantId_x == df.iloc[idx]['participantId']:
+            if x.teamId_x == df.iloc[idx]['teamId'] and x.participantId_x == df.iloc[idx]['participantId']:
                 sum = df.iloc[idx]['kills'] + df.iloc[idx]['assists']
-            if x.teamId_x == df.iloc[idx]['teamId'] and x.matchId == df.iloc[idx]['matchId']:
+            if x.teamId_x == df.iloc[idx]['teamId']:
                 avg = avg + df.iloc[idx]['kills']
+                print(avg)
     return round(sum / avg * 100, 2)
 
 
 tmp['kill_point'] = tmp.apply(lambda x: kill_point(x), axis=1)
+
+tmp['kill_point']
