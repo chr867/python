@@ -8,7 +8,11 @@ mu.oracle_open()
 df = mu.oracle_execute('select * from lol_datas')
 df = df[(df.GAMEDURATION > 900) & (df.GAMEDURATION < 100000)]
 
-df['win'] = df.apply(lambda x: 1 if x.WIN == 'True' else 0, axis=1)
+sql_conn = mu.connect_mysql('icia')
+df = pd.DataFrame(mu.mysql_execute_dict('select * from lol_mini', sql_conn))
+df = df[(df.gameDuration > 900) & (df.gameDuration < 100000)]
+sql_conn.close()
+df['win'] = df.apply(lambda x: 1 if x.win == 'True' else 0, axis=1)
 
 # blue팀 정글포지션 사람들만 꺼내서 [GAMEID,CHAMPIONNAME,WIN].RENAME(CHAMPIONID -> j_champ) \
 #   (테이블 이름 - blue_jungle)
@@ -31,19 +35,19 @@ df['win'] = df.apply(lambda x: 1 if x.WIN == 'True' else 0, axis=1)
 # games와 win횟수를 구하고 win_rate 컬럼 추가한  result 테이블 만들기
 #    result =
 
-blue_df_jg = df[(df.TEAMID == 100) & (df.TEAMPOSITION == 'JUNGLE')][['GAMEID', 'CHAMPIONNAME', 'win']].rename(columns={'CHAMPIONNAME': 'j_champ'})
-blue_df_mid = df[(df.TEAMID == 100) & (df.TEAMPOSITION == 'MIDDLE')][['GAMEID', 'CHAMPIONNAME', 'win']].rename(columns={'CHAMPIONNAME': 'm_champ'})
-blue_df_mg = pd.merge(blue_df_mid, blue_df_jg, on=['GAMEID', 'win'])
+blue_df_jg = df[(df.teamId == 100) & (df.teamPosition == 'JUNGLE')][['gameId', 'championName', 'win']].rename(columns={'championName': 'j_champ'})
+blue_df_mid = df[(df.teamId == 100) & (df.teamPosition == 'MIDDLE')][['gameId', 'championName', 'win']].rename(columns={'championName': 'm_champ'})
+blue_df_mg = pd.merge(blue_df_mid, blue_df_jg, on=['gameId', 'win'])
 
-red_df_jg = df[(df.TEAMID == 200) & (df.TEAMPOSITION == 'JUNGLE')][['GAMEID', 'CHAMPIONNAME', 'win']].rename(columns={'CHAMPIONNAME': 'j_champ'})
-red_df_mid = df[(df.TEAMID == 200) & (df.TEAMPOSITION == 'MIDDLE')][['GAMEID', 'CHAMPIONNAME', 'win']].rename(columns={'CHAMPIONNAME': 'm_champ'})
-red_df_mg = pd.merge(red_df_mid, red_df_jg, on=['GAMEID', 'win'])
+red_df_jg = df[(df.teamId == 200) & (df.teamPosition == 'JUNGLE')][['gameId', 'championName', 'win']].rename(columns={'championName': 'j_champ'})
+red_df_mid = df[(df.teamId == 200) & (df.teamPosition == 'MIDDLE')][['gameId', 'championName', 'win']].rename(columns={'championName': 'm_champ'})
+red_df_mg = pd.merge(red_df_mid, red_df_jg, on=['gameId', 'win'])
 
 blue_tmp = blue_df_mg.rename(columns={'j_champ': 'enemy_j_champ', 'm_champ': 'enemy_m_champ'})
 red_tmp = red_df_mg.rename(columns={'j_champ': 'enemy_j_champ', 'm_champ': 'enemy_m_champ'})
 
-blue_tmp2 = pd.merge(blue_df_mg, red_tmp, on='GAMEID')
-red_tmp2 = pd.merge(red_df_mg, blue_tmp, on='GAMEID')
+blue_tmp2 = pd.merge(blue_df_mg, red_tmp, on='gameId')
+red_tmp2 = pd.merge(red_df_mg, blue_tmp, on='gameId')
 
 tmp = blue_tmp2.append(red_tmp2)
 tmp = tmp[['m_champ', 'j_champ', 'enemy_j_champ', 'enemy_m_champ', 'win_x']]
@@ -58,7 +62,7 @@ win_cnt_df = tmp.groupby(['m_champ', 'j_champ', 'enemy_m_champ', 'enemy_j_champ'
 result = count_df.join(win_cnt_df)
 
 result['win_rate'] = result.win_cnt/result.cnt
-result[result['cnt'] > 10]
+result.sort_values(by='cnt', ascending=False)
 
 blue_df_ad = df[(df.TEAMID == 100) & (df.TEAMPOSITION == 'BOTTOM')].rename(columns={'CHAMPIONNAME': 'adc_champ'})
 blue_df_sup = df[(df.TEAMID == 100) & (df.TEAMPOSITION == 'UTILITY')].rename(columns={'CHAMPIONNAME': 'sup_champ'})
