@@ -22,7 +22,7 @@ while True:
         url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime=1673485200&type=ranked&start={start}&count=100&api_key={i}'
         res = requests.get(url).json()
         start += 100
-        match_ids += res
+        match_ids.append(res)
     if len(res) < 10:
         start = 0
         break
