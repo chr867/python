@@ -106,7 +106,7 @@ def get_match_info(_match_ids):
 # insert
 def insert(t, conn):
 
-    if 'status' in t.matches:
+    if 'status' in t.matches[:10]:
         print(f'{t.match_id} rate limit')
         return
 
@@ -197,9 +197,8 @@ def main():
         name_set = []
         for i, result in enumerate(tqdm(pool.map(load_summoner_names_worker, [0, 1, 2, 3]))):
             name_set.extend(result)
-            if i == 0:  # 첫 두 프로세스는 딜레이 없음
-                continue
-            time.sleep(3)  # 2초 딜레이
+            if i != 0:  # 첫 두 프로세스는 딜레이 없음
+                time.sleep(2)  # 2초 딜레이
 
     # Fetch matches timeline using 4 processes
     with mp.Pool(processes=4) as pool:
@@ -214,9 +213,8 @@ def main():
         for i, res in enumerate(tqdm(pool.imap(matches_timeline_worker, chunks), total=len(chunks))):
             output.append(res)
             result_count[output.index(res)] += 1
-            if i == 0:  # 첫 두 프로세스는 딜레이 없음
-                continue
-            time.sleep(3)  # 2초 딜레이
+            if i != 0:  # 첫 두 프로세스는 딜레이 없음
+               time.sleep(2)  # 2초 딜레이
 
         # 각 프로세스가 처리한 작업의 개수 합산
         total_results = sum(result_count)
