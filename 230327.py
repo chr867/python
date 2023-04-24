@@ -1,5 +1,6 @@
 # ------------------------------------------------------------------------#
 # Package
+import requests
 import pandas as pd
 import my_utils as mu
 import auto_insert as ai
@@ -10,6 +11,8 @@ import numpy as np
 
 raw_data = ai.get_rawdata('DIAMOND')
 raw_data
+
+raw_data.iloc[0].matches
 
 df = ai.get_match_timeline_df(raw_data)
 df
