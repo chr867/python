@@ -1,4 +1,5 @@
 import datetime
+import time
 
 import pandas as pd
 import requests
@@ -6,11 +7,8 @@ from tqdm import tqdm
 import private
 import my_utils as mu
 import json
-import pymysql
 tqdm.pandas()
 
-import imp
-imp.reload(private)
 '''
 전적 페이지로 이동(소환사 이름)
 소환사 이름으로 db 조회
@@ -21,6 +19,7 @@ riot_api_keys = private.riot_api_key_array
 
 # 소환사 이름 불러오기
 def load_summoner_names():
+    print('load_summoner_names...')
     tiers = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
     divisions = ['I', 'II', 'III', 'IV']
     name_lst = []
@@ -42,18 +41,21 @@ def load_summoner_names():
                 if len(res_p) < 200:
                     break
                 page_p += 1
+    print('load_summoner_names 종료', len(name_lst))
     return set(name_lst)
 # 소환사 이름 불러오기 끝
 
+
 # 소환사 이름으로 match_id 불러오기
 def load_match_ids(name_set):
+    print('load_match_ids...')
     index = 0
     match_ids = []
     for summoner_name in tqdm(name_set):
         api_key = iter(riot_api_keys)
         try:
             url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}?api_key={next(api_key)}'
-        except:
+        except StopIteration:
             api_key = iter(riot_api_keys)
         summoner_names = iter(name_set)
         res = requests.get(url).json()
@@ -65,12 +67,14 @@ def load_match_ids(name_set):
         if len(res) < 10:
             index = 0
             continue
-    sett = set(match_ids)
+    print('load_match_ids 종료')
+    return set(match_ids)
 # match_id 끗
+
 
 # match_id, matches, timeline 폼으로 만들기
 def get_match_info(_match_ids):
-    print('get_match_info')
+    print('get_match_info....')
     _result = []
     _it = iter(riot_api_keys)
     for match_id in tqdm(_match_ids):
@@ -84,6 +88,7 @@ def get_match_info(_match_ids):
         get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={_riot_api_key}'
         get_timeline_res = requests.get(get_timeline_url).json()
         _result.append([match_id, get_match_res, get_timeline_res])
+    print('get_match_info 종료')
     return pd.DataFrame(_result, columns=['match_id', 'matches', 'timeline'])
 # 끝
 
@@ -105,7 +110,7 @@ def insert(t, conn):
 
 # 소환사 이름 반복
 def matches_timeline(_name_lst_set):
-    for summoner_name in tqdm(_name_lst_set[224:]):
+    for summoner_name in tqdm(_name_lst_set):
         match_ids = []
         index = 0
         start = 1673485200  # 시즌 시작 Timestamp
@@ -116,7 +121,7 @@ def matches_timeline(_name_lst_set):
             try:
                 i = next(api_key)
                 url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}?api_key={i}'
-            except:
+            except StopIteration:
                 api_key = iter(riot_api_keys)
 
             res = requests.get(url).json()
@@ -130,7 +135,8 @@ def matches_timeline(_name_lst_set):
 
                 if len(res) < 10:
                     break
-        except:
+        except Exception as e:
+            print(e)
             continue
 
         sett = set(match_ids)
@@ -140,6 +146,58 @@ def matches_timeline(_name_lst_set):
         sql_conn.close()
 # 끝
 
+import multiprocessing as mp
 
-name_set = load_summoner_names()
-name_lst = list(name_set)
+# 멀티 프로세싱
+def main():
+    # Load summoner names using 4 processes
+    with mp.Pool(processes=4) as pool:
+        name_set = set()
+        for result in pool.map(load_summoner_names_worker, [0, 1, 2, 3]):
+            name_set.update(result)
+
+    # Fetch matches timeline using 4 processes
+    with mp.Pool(processes=4) as pool:
+        chunk_size = len(name_set) # 4  # 청크 크기 수정
+        chunks = [name_set[i:i + chunk_size] for i in range(0, len(name_set), chunk_size)]
+
+        results = [pool.apply_async(matches_timeline_worker, args=(chunk,)) for chunk in chunks]
+        output = [p.get() for p in results]
+
+
+def load_summoner_names_worker(worker_id):
+    # Divide the work among the workers
+    tiers = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
+    divisions = ['I', 'II', 'III', 'IV']
+    name_lst = []
+    for i in range(worker_id, len(tiers) * len(divisions), 4):
+        tier = tiers[i // len(divisions)]
+        division = divisions[i % len(divisions)]
+        page_p = 1
+        _it = iter(riot_api_keys)
+        while True:
+            try:
+                try:
+                    url_p = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{division}?page={page_p}&api_key={next(_it)}'
+                    res_p = requests.get(url_p).json()
+                except StopIteration:
+                    _it = iter(riot_api_keys)
+                for summoner in res_p:
+                    name_lst.append(summoner['summonerName'])
+            except Exception as e:
+                print(e)
+                continue
+            if len(res_p) < 200:
+                break
+            page_p += 1
+            time.sleep(0.05)
+    return set(name_lst)
+
+
+def matches_timeline_worker(name_set):
+    # Fetch matches timeline for a set of summoner names
+    matches_timeline(name_set)
+
+
+if __name__ == '__main__':
+    main()
