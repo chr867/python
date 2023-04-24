@@ -21,19 +21,29 @@ riot_api_keys = private.riot_api_key_array
 
 # 소환사 이름 불러오기
 def load_summoner_names():
-    tiers = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
-    divisions = ['I', 'II', 'III', 'IV']
+    tiers = ['C', 'GM', 'M']
+    # divisions = ['I', 'II', 'III', 'IV']
     name_lst = []
     for tier in tqdm(tiers):
-        for division in tqdm(divisions):
             page_p = 1
             _it = iter(riot_api_keys)
             while True:
                 try:
-                    url_p = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{division}?page={page_p}&api_key={next(_it)}'
-                    res_p = requests.get(url_p).json()
+                    if tier == 'C':
+                        url_p = f'https://kr.api.riotgames.com/lol/league/v4/challengerleagues/by-queue/RANKED_SOLO_5x5?api_key={next(_it)}'
+                        res_p = requests.get(url_p).json()
+
+                    elif tier == 'GM':
+                        url_p = f'https://kr.api.riotgames.com/lol/league/v4/grandmasterleagues/by-queue/RANKED_SOLO_5x5?api_key={next(_it)}'
+                        res_p = requests.get(url_p).json()
+
+                    elif tier == 'M':
+                        url_p = f'https://kr.api.riotgames.com/lol/league/v4/masterleagues/by-queue/RANKED_SOLO_5x5?api_key={mu.riot_api_key}'
+                        res_p = requests.get(url_p).json()
+
                 except StopIteration:
                     _it = iter(riot_api_keys)
+
                 except Exception as e:
                     print(e)
                     continue
