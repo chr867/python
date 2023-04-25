@@ -19,91 +19,60 @@ riot_api_keys = private.riot_api_key_array
 
 def load_summoner_names_worker(worker_id):
     # Divide the work among the workers
-    print('**load_summoner_names**  get_match_info  matches_timeline')
-
     api_key = riot_api_keys[worker_id]
     tiers = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
     divisions = ['I', 'II', 'III', 'IV']
-    id_set = set()
     name_set = set()
     page_p = 1
 
     for i in range(worker_id, len(tiers) * len(divisions), 12):
         tier = tiers[i // len(divisions)]
         division = divisions[i % len(divisions)]
-        while True:
-            try:
-                url = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{division}?page={page_p}&api_key={api_key}'
-                res = requests.get(url).json()
-            except Exception as e:
-                print(f'{e} 예외 발생', res)
-                time.sleep(20)
-                continue
+        sum = 28001337
+        subt = 10656
+        total = int(((sum-subt)/12)/200)
+        with tqdm(total=total) as pbar:
+            while True:
+                try:
+                    url = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{division}?page={page_p}&api_key={api_key}'
+                    res_p = requests.get(url).json()
+                except Exception as e:
+                    print(f'{e} 예외 발생', res_p)
+                    continue
 
-            for summoner in res:
-                id_set.update([summoner['summonerId']])
+                for summoner in res_p:
+                    name_set.update([summoner['summonerName']])
 
-            id_it = iter(list(id_set))
-            time.sleep(1.3)
-
-            with tqdm(total=len(id_set)) as pbar:
-                while True:
-                    try:
-                        id = next(id_it)
-                    except StopIteration:
-                        break
-
-                    try:
-                        url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/{id}?api_key={api_key}'
-                        res = requests.get(url).json()
-                        name_set.add(res['name'])
-                        time.sleep(1.3)
-                    except Exception as e:
-                        print(f'{e} 예외 발생', res)
-                        time.sleep(20)
-                        continue
-
-                    pbar.update(1)
-                if len(res) < 200:
+                time.sleep(1.3)
+                page_p += 1
+                pbar.update(1)
+                if len(res_p) < 200:
                     break
-        page_p += 1
-        print('worker = ', worker_id, 'len = ', len(name_set))
-        break
+
     print('load_summoner_names END', worker_id)
     return list(name_set)
 
 # match_id, matches, timeline 폼으로 만들기
 def get_match_info(_match_ids, i):
-    print('load_summoner_names  matches_timeline  **get_match_info**', len(_match_ids))
     _result = []
     api_key = riot_api_keys[i]
 
-    match_it = iter(_match_ids)
-
-    with tqdm(total=len(_match_ids)) as pbar:
-
+    for match_id in tqdm(_match_ids):
         while True:
             try:
-                match_id = next(match_it)
-            except StopIteration:
+                get_match_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
+                get_match_res = requests.get(get_match_url).json()
+                time.sleep(1.3)
+                get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={api_key}'
+                get_timeline_res = requests.get(get_timeline_url).json()
+                _result.append([match_id, get_match_res, get_timeline_res])
+                time.sleep(1.3)
                 break
 
-            while True:
+            except Exception as e:
+                print(f'{e} 예외 발생')
+                continue
 
-                try:
-                    get_match_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
-                    get_match_res = requests.get(get_match_url).json()
-                    time.sleep(1.3)
-                    get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={api_key}'
-                    get_timeline_res = requests.get(get_timeline_url).json()
-                    _result.append([match_id, get_match_res, get_timeline_res])
-                    time.sleep(1.3)
-                    break
-
-                except Exception as e:
-                    print(f'{e} 예외 발생')
-                    continue
-            pbar.update(1)
     result_df = pd.DataFrame(_result, columns=['match_id', 'matches', 'timeline'])
     print('get_match_info END len = ', len(result_df))
     return result_df
@@ -130,49 +99,40 @@ def insert(t, conn):
     conn.commit()
 # insert 끝
 
-
 def matches_timeline(_name_lst, i):
-    print(i, 'load_summoner_names  **matches_timeline**  get_match_info', len(_name_lst))
     match_ids = set()
-    summoner_names = iter(_name_lst)
     api_key = riot_api_keys[i]
 
-    with tqdm(total=len(_name_lst)) as pbar:
+    for summoner_name in tqdm(_name_lst):
         while True:
+            index = 0
+            start = 1673485200  # 시즌 시작 Timestamp
+            run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
             try:
-                summoner_name = next(summoner_names)
-            except StopIteration:
-                break
-            while True:
-                index = 0
-                start = 1673485200  # 시즌 시작 Timestamp
-                run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
-                try:
-                    url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}?api_key={api_key}'
+                url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}?api_key={api_key}'
+                res = requests.get(url).json()
+                puuid = res['puuid']
+                time.sleep(1.3)
+
+                while True:
+                    url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={start}&type=ranked&start={index}&count=100&api_key={api_key}'
                     res = requests.get(url).json()
-                    puuid = res['puuid']
+                    index += 100
+                    match_ids.update(res)
+                    if len(res) < 10:
+                        break
                     time.sleep(1.3)
 
-                    while True:
-                        url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={start}&type=ranked&start={index}&count=100&api_key={api_key}'
-                        res = requests.get(url).json()
-                        index += 100
-                        match_ids.update(res)
-                        if len(res) < 10:
-                            break
-                        time.sleep(1.3)
+            except Exception as e:
+                if 'found' in res['status']['message']:
+                    print(summoner_name, 'not found')
+                    break
 
-                except Exception as e:
-                    if 'found' in res['status']['message']:
-                        print(summoner_name, 'not found')
-                        break
+                print(f'{e} 예외 발생, {res["status"]["message"]}')
+                time.sleep(20)
+                continue
 
-                    print(f'{e} 예외 발생, {res["status"]["message"]}')
-                    time.sleep(20)
-                    continue
-
-                break
-            pbar.update(1)
+            break
 
     return list(match_ids)
 # 끝
@@ -189,6 +149,7 @@ def get_match_info_worker(args):
 def main():
     # Load summoner names using 12 processes
     with mp.Pool(processes=12) as pool:
+        print('**load_summoner_names**  get_match_info  matches_timeline')
         name_set = set()
         for i, result in enumerate(tqdm(pool.imap(load_summoner_names_worker, range(12)))):
             name_set.update(result)
@@ -197,6 +158,7 @@ def main():
     print(len(name_set))
     name_lst = list(name_set)
 
+    print('load_summoner_names  **matches_timeline**  get_match_info', print(len(name_lst)))
     with mp.Pool(processes=12) as pool:
         chunk_size = len(name_lst)
         chunks = [name_lst[i:i + chunk_size // 12] for i in range(0, len(name_lst), chunk_size // 12)]
@@ -211,23 +173,24 @@ def main():
         for output in matches_timeline_output:
             match_set.add(output)
 
-        # Fetch match info using 12 processes
-        match_ids = list(match_set)
-        with mp.Pool(processes=12) as pool:
-            chunk_size = len(match_ids)
-            chunks = [match_ids[i:i + chunk_size // 12] for i in range(0, len(match_ids), chunk_size // 12)]
+    # Fetch match info using 12 processes
+    match_ids = list(match_set)
+    print('load_summoner_names  matches_timeline  **get_match_info**', len(match_ids))
+    with mp.Pool(processes=12) as pool:
+        chunk_size = len(match_ids)
+        chunks = [match_ids[i:i + chunk_size // 12] for i in range(0, len(match_ids), chunk_size // 12)]
 
-            # imap으로 대체
-            match_info_output = []
-            for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(12))), total=len(chunks))):
-                match_info_output.append(res)
+        # imap으로 대체
+        match_info_output = []
+        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(12))), total=len(chunks))):
+            match_info_output.append(res)
 
-            # 결과 합치기
-            for output in match_info_output:
-                result = output
-                sql_conn = mu.connect_mysql('lol_icia')
-                result.apply(lambda x: insert(x, sql_conn), axis=1)
-                sql_conn.close()
+        # 결과 합치기
+        for output in match_info_output:
+            result = output
+            sql_conn = mu.connect_mysql('lol_icia')
+            result.apply(lambda x: insert(x, sql_conn), axis=1)
+            sql_conn.close()
 
 if __name__ == '__main__':
     main()
