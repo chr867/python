@@ -1,4 +1,5 @@
 import datetime
+import random
 import time
 import pandas as pd
 import requests
@@ -18,39 +19,78 @@ flask에서 정제한 df(횟수, 승률, KDA)를 json으로 변환해서 return
 riot_api_keys = private.riot_api_key_array
 
 def load_summoner_names_worker(worker_id):
-    # Divide the work among the workers
     api_key = riot_api_keys[worker_id]
-    tiers = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
-    divisions = ['I', 'II', 'III', 'IV']
-    name_set = set()
-    page_p = 1
-
-    for i in range(worker_id, len(tiers) * len(divisions), 12):
-        tier = tiers[i // len(divisions)]
-        division = divisions[i % len(divisions)]
-        sum = 28001337
-        subt = 10656
-        total = int(((sum-subt)/12)/200)
-        with tqdm(total=total) as pbar:
+    tier_division = [
+        [['GOLD', 'IV'], ['IRON', 'IV'], ['IRON', 'III']],
+        [['SILVER', 'IV'], ['IRON', 'II'], ['PLATINUM', 'II']],
+        [['SILVER', 'II'], ['IRON', 'I'], ['PLATINUM', 'III']],
+        [['SILVER', 'III'], ['GOLD', 'I'], ['DIAMOND', 'IV']],
+        [['SILVER', 'I'], ['GOLD', 'II'], ['DIAMOND', 'I']],
+        [['BRONZE', 'II'], ['BRONZE', 'III'], ['DIAMOND', 'III']],
+        [['GOLD', 'III'], ['BRONZE', 'I'], ['DIAMOND', 'II']],
+        [['BRONZE', 'IV'], ['PLATINUM', 'IV'], ['PLATINUM', 'I']]
+    ]
+    for i in tqdm(tier_division[worker_id]):
+        tier = i[0]
+        division = i[1]
+        page_p = 1
+        name_set = []
+        with tqdm(total=100) as pbar:
             while True:
                 try:
                     url = f'https://kr.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{division}?page={page_p}&api_key={api_key}'
                     res_p = requests.get(url).json()
+
+                    for summoner in res_p:
+                        name_set.append(summoner['summonerId'])
+
                 except Exception as e:
-                    print(f'{e} 예외 발생', res_p)
+                    print(f'{e} 예외 발생, {res_p["status"]["message"]}, {api_key}')
                     continue
 
-                for summoner in res_p:
-                    name_set.update([summoner['summonerName']])
-
-                time.sleep(1.3)
                 page_p += 1
-                pbar.update(1)
+                time.sleep(1.3)
+
                 if len(res_p) < 200:
                     break
+                pbar.update(1)
+                if len(name_set) > 20000:
+                    break
 
+        match_ids = set()
+        for summoner_name in tqdm(name_set):
+            while True:
+                index = 0
+                start = 1673485200  # 시즌 시작 Timestamp
+                run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
+                try:
+
+                    url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/{summoner_name}?api_key={api_key}'
+                    res = requests.get(url).json()
+                    puuid = res['puuid']
+                    time.sleep(1.3)
+
+                    while True:
+                        url = f'https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?startTime={start}&type=ranked&start={index}&count=100&api_key={api_key}'
+                        res = requests.get(url).json()
+                        index += 100
+                        match_ids.update(res)
+                        if len(res) < 10:
+                            break
+                        time.sleep(1.3)
+
+                except Exception as e:
+                    if 'found' in res['status']['message']:
+                        print(summoner_name, 'not found')
+                        break
+
+                    print(f'{e} 예외 발생, {res["status"]["message"]},{api_key}')
+                    continue
+
+                break
+    match_ids = list(match_ids)
     print('load_summoner_names END', worker_id)
-    return list(name_set)
+    return match_ids
 
 # match_id, matches, timeline 폼으로 만들기
 def get_match_info(_match_ids, i):
@@ -65,7 +105,7 @@ def get_match_info(_match_ids, i):
                 time.sleep(1.3)
                 get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={api_key}'
                 get_timeline_res = requests.get(get_timeline_url).json()
-                _result.append([match_id, get_match_res, get_timeline_res])
+                _result.append([match_id, get_match_res, get_timeline_res, api_key])
                 time.sleep(1.3)
                 break
 
@@ -73,7 +113,7 @@ def get_match_info(_match_ids, i):
                 print(f'{e} 예외 발생')
                 continue
 
-    result_df = pd.DataFrame(_result, columns=['match_id', 'matches', 'timeline'])
+    result_df = pd.DataFrame(_result, columns=['match_id', 'matches', 'timeline', 'api_key'])
     print('get_match_info END len = ', len(result_df))
     return result_df
 # 끝
@@ -93,7 +133,7 @@ def insert(t, conn):
 
     matches_json, timeline_json = conn.escape_string(json.dumps(t.matches)), conn.escape_string(json.dumps(t.timeline))
     sql_insert = (
-        f"insert ignore into newtable (match_id, matches, timeline) values ({repr(t.match_id)}, '{matches_json}', '{timeline_json}') "
+        f"insert ignore into match_raw (match_id, matches, timeline) values ({repr(t.match_id)}, '{matches_json}', '{timeline_json}') "
     )
     mu.mysql_execute(sql_insert, conn)
     conn.commit()
@@ -109,8 +149,10 @@ def matches_timeline(_name_lst, i):
             start = 1673485200  # 시즌 시작 Timestamp
             run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
             try:
-                url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-name/{summoner_name}?api_key={api_key}'
+
+                url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/{summoner_name}?api_key={api_key}'
                 res = requests.get(url).json()
+                print(res)
                 puuid = res['puuid']
                 time.sleep(1.3)
 
@@ -129,7 +171,6 @@ def matches_timeline(_name_lst, i):
                     break
 
                 print(f'{e} 예외 발생, {res["status"]["message"]}')
-                time.sleep(20)
                 continue
 
             break
@@ -146,51 +187,33 @@ def get_match_info_worker(args):
     match_info = get_match_info(match_id, i)
     return match_info
 
+
 def main():
-    # Load summoner names using 12 processes
-    with mp.Pool(processes=12) as pool:
+    # Load summoner names using 8 processes
+    with mp.Pool(processes=8) as pool:
         print('**load_summoner_names**  get_match_info  matches_timeline')
-        name_set = set()
-        for i, result in enumerate(tqdm(pool.imap(load_summoner_names_worker, range(12)))):
-            name_set.update(result)
+        match_ids = set()
+        for i, result in enumerate(tqdm(pool.imap(load_summoner_names_worker, range(8)))):
+            match_ids.update(result)
 
-    # Fetch matches timeline using 12 processes
-    print(len(name_set))
-    name_lst = list(name_set)
+    # Fetch matches timeline using 8 processes
+    print(len(match_ids))
+    match_ids = list(match_ids)
 
-    print('load_summoner_names  **matches_timeline**  get_match_info', print(len(name_lst)))
-    with mp.Pool(processes=12) as pool:
-        chunk_size = len(name_lst)
-        chunks = [name_lst[i:i + chunk_size // 12] for i in range(0, len(name_lst), chunk_size // 12)]
-
-        # imap으로 대체
-        matches_timeline_output = []
-        for i, res in enumerate(tqdm(pool.imap(matches_timeline_worker, zip(chunks, range(12))), total=len(chunks))):
-            matches_timeline_output.extend(res)
-
-        # 결과 합치기
-        match_set = set()
-        for output in matches_timeline_output:
-            match_set.add(output)
-
-    # Fetch match info using 12 processes
-    match_ids = list(match_set)
     print('load_summoner_names  matches_timeline  **get_match_info**', len(match_ids))
-    with mp.Pool(processes=12) as pool:
+    with mp.Pool(processes=8) as pool:
         chunk_size = len(match_ids)
-        chunks = [match_ids[i:i + chunk_size // 12] for i in range(0, len(match_ids), chunk_size // 12)]
+        chunks = [match_ids[i:i + chunk_size // 8] for i in range(0, len(match_ids), chunk_size // 8)]
 
         # imap으로 대체
-        match_info_output = []
-        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(12))), total=len(chunks))):
-            match_info_output.append(res)
-
-        # 결과 합치기
-        for output in match_info_output:
-            result = output
-            sql_conn = mu.connect_mysql('lol_icia')
-            result.apply(lambda x: insert(x, sql_conn), axis=1)
-            sql_conn.close()
+        # match_info_output = []
+        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(8))), total=len(chunks))):
+            # match_info_output.append(res)
+            for output in tqdm(res):
+                result = output
+                sql_conn = mu.connect_mysql('my_db')
+                result.apply(lambda x: insert(x, sql_conn), axis=1)
+                sql_conn.close()
 
 if __name__ == '__main__':
     main()

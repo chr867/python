@@ -48,7 +48,7 @@ def oracle_close():
 
 
 def connect_mysql(db):
-    mysql_conn = pymysql.connect(host='localhost', user='root', password='1234', db=db, charset='utf8')
+    mysql_conn = pymysql.connect(host='112.218.158.250', user='test_user', password='1234', db=db, charset='utf8', port=4000)
     return mysql_conn
 
 
