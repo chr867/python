@@ -1,5 +1,4 @@
 import datetime
-import random
 import time
 import pandas as pd
 import requests
@@ -8,6 +7,8 @@ import private
 import my_utils as mu
 import json
 import multiprocessing as mp
+import logging
+
 tqdm.pandas()
 
 '''
@@ -15,6 +16,7 @@ tqdm.pandas()
 소환사 이름으로 db 조회
 flask에서 정제한 df(횟수, 승률, KDA)를 json으로 변환해서 return
 '''
+
 
 riot_api_keys = private.riot_api_key_array
 
@@ -52,7 +54,7 @@ def load_summoner_names_worker(worker_id):
 
             if len(res_p) < 200:
                 break
-            if len(name_lst) > 5000:
+            if len(name_lst) > 2000:
                 break
             page_p += 1
 
@@ -62,7 +64,7 @@ def load_summoner_names_worker(worker_id):
             while True:
                 index = 0
                 start = 1673485200  # 시즌 시작 Timestamp
-                run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
+                # tmp = 1683438967290
                 try:
 
                     url = f'https://kr.api.riotgames.com/lol/summoner/v4/summoners/{summoner_name}?api_key={api_key}'
@@ -87,6 +89,7 @@ def load_summoner_names_worker(worker_id):
                     continue
 
                 break
+
     match_ids = list(match_ids)
     print('load_match_ids END', worker_id, len(match_ids))
     return match_ids
@@ -97,31 +100,35 @@ def get_match_info_worker(args):
     _match_ids, i = args
     _result = []
     api_key = riot_api_keys[i]
-
+    tmp = set()
     for match_id in tqdm(_match_ids):
         while True:
             try:
                 get_match_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
                 get_match_res = requests.get(get_match_url).json()
-
-                if 'status' in get_match_res:
-                    if 'not found' in get_match_res["status"]["message"]:
-                        break
-                    raise Exception(f'get match {get_match_res["status"]["message"]}')
-
-                get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={api_key}'
-                get_timeline_res = requests.get(get_timeline_url).json()
-
-                if 'status' in get_timeline_res:
-                    if 'not found' in get_timeline_res["status"]["message"]:
-                        break
-                    raise Exception(f'get timeline {get_timeline_res["status"]["message"]},{api_key}')
-
+                tmp.update(get_match_res['metadata'])
             except Exception as e:
-                print(f'{e} 예외 발생 {api_key}')
+                if 'found' in get_match_res['status']['message']:
+                    break
+
+                print(f'{e} 예외 발생, {get_match_res["status"]["message"]},{api_key}')
                 time.sleep(20)
                 continue
 
+            try:
+                get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={api_key}'
+                get_timeline_res = requests.get(get_timeline_url).json()
+                tmp.update(get_timeline_res['metadata'])
+
+            except Exception as e:
+                if 'found' in get_timeline_res['status']['message']:
+                    break
+
+                print(f'{e} 예외 발생, {get_timeline_res["status"]["message"]},{api_key}')
+                time.sleep(20)
+                continue
+
+            tmp = set()
             _result.append([match_id, get_match_res, get_timeline_res])
             break
 
@@ -130,23 +137,34 @@ def get_match_info_worker(args):
     return result_df
 # 끝
 
-# insert
-def insert(t, conn_):
-    matches_json, timeline_json = conn_.escape_string(json.dumps(t.matches)), conn_.escape_string(json.dumps(t.timeline))
-    sql_insert = (
-        f"insert ignore into match_raw (match_id, matches, timeline) values ({repr(t.match_id)}, '{matches_json}', "
-        f"'{timeline_json}')"
-    )
-    mu.mysql_execute(sql_insert, conn_)
-# insert 끝
-
 def insert_worker(match_info):
     conn = mu.connect_mysql('my_db')
     match_info.apply(lambda x: insert(x, conn), axis=1)
     conn.commit()
     conn.close()
 
+# insert
+def insert(t, conn_):
+    try:
+        matches_json, timeline_json = conn_.escape_string(json.dumps(t.matches)), conn_.escape_string(json.dumps(t.timeline))
+        sql_insert = (
+            f"insert ignore into match_raw (match_id, matches, timeline) values ({repr(t.match_id)}, '{matches_json}', "
+            f"'{timeline_json}')"
+        )
+        mu.mysql_execute(sql_insert, conn_)
+    except Exception as e:
+        logging.exception(f"Error occurred during insert: {e}, {t.match_id}")
+# insert 끝
+
 def main():
+    run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
+    now = datetime.datetime.now()
+    formatted_time = now.strftime("%Y-%m-%d %H:%M")
+    file_path = "C:/icia/python/runtime.txt"  # 메모장에 저장할 파일 경로와 이름 설정
+    with open(file_path, "w") as f:  # 파일 열기
+        f.write(formatted_time + " " + str(run_time))  # 런타임 값을 파일에 쓰기
+    f.close()  # 파일 닫기
+
     with mp.Pool(processes=8) as pool:
         print('**load_summoner_names**  get_match_info  matches_timeline')
         match_ids = set()
@@ -155,11 +173,11 @@ def main():
 
     match_ids = list(match_ids)
     print('load_summoner_names  matches_timeline  **get_match_info**', len(match_ids))
-    with mp.Pool(processes=8) as pool:
+    with mp.Pool(processes=12) as pool:
         chunk_size = len(match_ids)
-        chunks = [match_ids[i:i + chunk_size // 8] for i in range(0, len(match_ids), chunk_size // 8)]
+        chunks = [match_ids[i:i + chunk_size // 12] for i in range(0, len(match_ids), chunk_size // 12)]
         match_info_output = []
-        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(8))), total=len(chunks))):
+        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(12))), total=len(chunks))):
             match_info_output.append(res)
 
     merged_df = pd.concat(match_info_output)
@@ -176,5 +194,8 @@ def main():
             for i in tqdm(pool.imap(insert_worker, chunks2), total=len(chunks2)):
                 pass
 
+
 if __name__ == '__main__':
     main()
+
+
