@@ -1,4 +1,5 @@
 import datetime
+import random
 import time
 import pandas as pd
 import requests
@@ -8,7 +9,6 @@ import my_utils as mu
 import json
 import multiprocessing as mp
 import logging
-
 tqdm.pandas()
 
 '''
@@ -16,7 +16,6 @@ tqdm.pandas()
 소환사 이름으로 db 조회
 flask에서 정제한 df(횟수, 승률, KDA)를 json으로 변환해서 return
 '''
-
 
 riot_api_keys = private.riot_api_key_array
 
@@ -36,8 +35,8 @@ def load_summoner_names_worker(worker_id):
     for i in tqdm(tier_division[worker_id]):
         tier = i[0]
         division = i[1]
-        page_p = 1
-        name_lst = []
+        page_p = random.randrange(1, 50)
+        name_set = set()
 
         while True:
             try:
@@ -45,22 +44,27 @@ def load_summoner_names_worker(worker_id):
                 res_p = requests.get(url).json()
 
                 for summoner in res_p:
-                    name_lst.append(summoner['summonerId'])
+                    name_set.add(summoner['summonerId'])
 
             except Exception:
-                print(f'suummoner names 예외 발생 {res_p["status"]["message"]}, {api_key}')
-                time.sleep(10)
-                continue
+                if 'Forbidden' in res_p['status']['message']:
+                    break
 
+                print(f'suummoner names 예외 발생 {res_p["status"]["message"]}, {api_key}')
+                time.sleep(20)
+                continue
+            print(len(name_set))
             if len(res_p) < 200:
                 break
-            if len(name_lst) > 2000:
-                break
-            page_p += 1
 
-        print('load_summoner_names END', worker_id, len(name_lst))
+            break
+
+        print('load_summoner_names END', worker_id, len(name_set))
         match_ids = set()
-        for summoner_name in tqdm(name_lst):
+        name_lst = list(name_set)
+        random.shuffle(name_lst)
+
+        for summoner_name in tqdm(name_lst[:50]):
             while True:
                 index = 0
                 start = 1673485200  # 시즌 시작 Timestamp
@@ -101,35 +105,40 @@ def get_match_info_worker(args):
     _result = []
     api_key = riot_api_keys[i]
     tmp = set()
-    for match_id in tqdm(_match_ids):
+    random.shuffle(_match_ids)
+
+    for match_id in tqdm(_match_ids[:200]):  # 수정점
         while True:
+            time.sleep(1.25)
             try:
                 get_match_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={api_key}'
                 get_match_res = requests.get(get_match_url).json()
                 tmp.update(get_match_res['metadata'])
             except Exception as e:
+                print(f'{e} match, {get_match_res["status"]["message"]},{api_key}')
                 if 'found' in get_match_res['status']['message']:
                     break
-
-                print(f'{e} 예외 발생, {get_match_res["status"]["message"]},{api_key}')
+                if 'Forbidden' in get_match_res['status']['message']:
+                    break
                 time.sleep(20)
                 continue
 
+            time.sleep(1.25)
             try:
                 get_timeline_url = f'https://asia.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={api_key}'
                 get_timeline_res = requests.get(get_timeline_url).json()
                 tmp.update(get_timeline_res['metadata'])
-
             except Exception as e:
+                print(f'{e} timeline, {get_timeline_res},{api_key}')
                 if 'found' in get_timeline_res['status']['message']:
                     break
-
-                print(f'{e} 예외 발생, {get_timeline_res["status"]["message"]},{api_key}')
+                if 'Forbidden' in get_timeline_res['status']['message']:
+                    break
                 time.sleep(20)
                 continue
 
-            tmp = set()
             _result.append([match_id, get_match_res, get_timeline_res])
+            tmp.clear()
             break
 
     result_df = pd.DataFrame(_result, columns=['match_id', 'matches', 'timeline'])
@@ -137,13 +146,15 @@ def get_match_info_worker(args):
     return result_df
 # 끝
 
-def insert_worker(match_info):
+def insert_worker(args):
+    match_info, i = args
+    time.sleep(i*0.1)
     conn = mu.connect_mysql('my_db')
-    match_info.apply(lambda x: insert(x, conn), axis=1)
+    match_info.progress_apply(lambda x: insert(x, conn), axis=1)
     conn.commit()
     conn.close()
-
 # insert
+
 def insert(t, conn_):
     try:
         matches_json, timeline_json = conn_.escape_string(json.dumps(t.matches)), conn_.escape_string(json.dumps(t.timeline))
@@ -160,42 +171,42 @@ def main():
     run_time = int(time.time() * 1000)  # 코드 돌린 Timestamp
     now = datetime.datetime.now()
     formatted_time = now.strftime("%Y-%m-%d %H:%M")
-    file_path = "C:/icia/python/runtime.txt"  # 메모장에 저장할 파일 경로와 이름 설정
+    file_path = "C:/icia/python/runtime.txt"  # 메모장에 저장할 파일 경로와 이름 설정 헤응
     with open(file_path, "w") as f:  # 파일 열기
         f.write(formatted_time + " " + str(run_time))  # 런타임 값을 파일에 쓰기
     f.close()  # 파일 닫기
 
     with mp.Pool(processes=8) as pool:
-        print('**load_summoner_names**  get_match_info  matches_timeline')
+        print('**load_summoner_names**  matches_timeline')
         match_ids = set()
         for i, result in enumerate(tqdm(pool.imap(load_summoner_names_worker, range(8)))):
             match_ids.update(result)
 
     match_ids = list(match_ids)
-    print('load_summoner_names  matches_timeline  **get_match_info**', len(match_ids))
-    with mp.Pool(processes=12) as pool:
+    print('load_summoner_names  **get_match_info**', len(match_ids))
+    with mp.Pool(processes=8) as pool:
         chunk_size = len(match_ids)
-        chunks = [match_ids[i:i + chunk_size // 12] for i in range(0, len(match_ids), chunk_size // 12)]
+        chunks = [match_ids[i:i + chunk_size // 8] for i in range(0, len(match_ids), chunk_size // 8)]
         match_info_output = []
-        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(12))), total=len(chunks))):
+        for i, res in enumerate(tqdm(pool.imap(get_match_info_worker, zip(chunks, range(8))), total=len(chunks))):
             match_info_output.append(res)
 
     merged_df = pd.concat(match_info_output)
     print("merged_df =", len(merged_df))
-    n_rows = len(merged_df) // 12  # 하나의 부분 데이터프레임에 들어갈 행의 수
-    df_chunks = [merged_df[i:i + n_rows] for i in range(0, len(merged_df), n_rows)]
-    print("df_chunks = ", len(df_chunks))
+
     with mp.Pool(processes=12) as pool:
-        for df_chunk in df_chunks:
-            chunk_size2 = len(df_chunk)
-            chunk_step = chunk_size2 // 12
-            chunks2 = [df_chunk[i:i + chunk_step] for i in range(0, chunk_size2, chunk_step)]
+        print('**insert**')
+        chunk_size = len(merged_df) // 12
+        chunks2 = [merged_df[i:i + chunk_size] for i in range(0, len(merged_df), chunk_size)]
+        for _ in tqdm(pool.imap(insert_worker, zip(chunks2, range(12))), total=len(chunks2)):
+            pass
 
-            for i in tqdm(pool.imap(insert_worker, chunks2), total=len(chunks2)):
-                pass
-
+    print('done')
 
 if __name__ == '__main__':
-    main()
+    for _ in tqdm(range(24)):
+        main()
+        print('sleep 20')
+        time.sleep(20)
 
 
